@@ -97,6 +97,8 @@ extern "C" void app_main(void) {
   ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
   ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
 
+  xSemaphore = xSemaphoreCreateMutex();
+
 
   // PeerConfiguration config = {
   //   .ice_servers = {
@@ -106,8 +108,6 @@ extern "C" void app_main(void) {
   // };
 
   // ESP_ERROR_CHECK(example_connect());
-
-  xSemaphore = xSemaphoreCreateMutex();
 
   // Launch the application
   Application::GetInstance().Start();
