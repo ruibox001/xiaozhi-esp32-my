@@ -11,3 +11,7 @@ target_compile_options(${COMPONENT_LIB} PRIVATE "-Wno-error=incompatible-pointer
 3、类型强制转换
 g_ps.transport.recv = (TransportRecv_t)ssl_transport_recv;
 g_ps.transport.send = (TransportSend_t)ssl_transport_send;
+
+4、编译报错-format
+在main的CMakeLists.txt中加入
+target_compile_options(${COMPONENT_LIB} PRIVATE "-Wno-format")

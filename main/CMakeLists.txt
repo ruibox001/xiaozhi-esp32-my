@@ -17,7 +17,8 @@ set(SOURCES "audio_codecs/audio_codec.cc"
             "ota.cc"
             "settings.cc"
             "background_task.cc"
-            "main.cc"
+            # "main.cc"
+            "app_main.cc"
             )
 
 set(INCLUDE_DIRS "." "display" "audio_codecs" "protocols" "audio_processing")
@@ -210,3 +211,5 @@ add_custom_command(
 add_custom_target(lang_header ALL
     DEPENDS ${LANG_HEADER}
 )
+
+target_compile_options(${COMPONENT_LIB} PRIVATE "-Wno-format")
