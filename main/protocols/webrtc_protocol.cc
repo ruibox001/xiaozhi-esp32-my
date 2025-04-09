@@ -81,7 +81,7 @@ void peer_start_setup() {
         .ice_servers = {
             { .urls = "stun:stun.l.google.com:19302" }
         },
-        .audio_codec = CODEC_PCMA,
+        .audio_codec = CODEC_OPUS,
         .datachannel = DATA_CHANNEL_BINARY,
     };
 
@@ -89,7 +89,9 @@ void peer_start_setup() {
     ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
     ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
 
-    strcpy(deviceid, SystemInfo::GetMacAddress().c_str());
+    const char *mac_str = SystemInfo::GetMacAddress().c_str();
+    // strcpy(deviceid, SystemInfo::GetMacAddress().c_str());
+    strncpy(deviceid, mac_str, sizeof(mac_str));
     ESP_LOGI(TAG, "Device ID: %s", deviceid);
 
     xSemaphore = xSemaphoreCreateMutex();
