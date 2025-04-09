@@ -7,6 +7,7 @@
 #include <web_socket.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
+#include "peer.h"
 
 class WebrtcProtocol : public Protocol {
 public:
@@ -20,8 +21,6 @@ public:
     bool IsAudioChannelOpened() const override;
 
 private:
-    // EventGroupHandle_t event_group_handle_;
-    // WebSocket* websocket_ = nullptr;
 
     void ParseServerHello(const cJSON* root);
     void SendText(const std::string& text) override;

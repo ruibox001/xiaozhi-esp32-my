@@ -100,40 +100,40 @@ extern "C" void app_main(void) {
   xSemaphore = xSemaphoreCreateMutex();
 
 
-  // PeerConfiguration config = {
-  //   .ice_servers = {
-  //       {.urls = "stun:stun.l.google.com:19302"}},
-  //   .audio_codec = CODEC_PCMA,
-  //   .datachannel = DATA_CHANNEL_BINARY,
-  // };
+  PeerConfiguration config = {
+    .ice_servers = {
+        {.urls = "stun:stun.l.google.com:19302"}},
+    .audio_codec = CODEC_PCMA,
+    .datachannel = DATA_CHANNEL_BINARY,
+  };
 
-  // ESP_ERROR_CHECK(example_connect());
+  ESP_ERROR_CHECK(example_connect());
 
   // Launch the application
   Application::GetInstance().Start();
 
-  // peer_init();
+  peer_init();
 
   // audio_init();
 
-  // camera_init();
+  camera_init();
 
 // #if defined(CONFIG_ESP32S3_EYE)
   // audio_init();
 // #endif
 
-  // g_pc = peer_connection_create(&config);
-  // peer_connection_oniceconnectionstatechange(g_pc, oniceconnectionstatechange);
-  // peer_connection_ondatachannel(g_pc, onmessage, onopen, onclose);
-  // peer_signaling_connect(CONFIG_SIGNALING_URL, CONFIG_SIGNALING_TOKEN, g_pc);
+  g_pc = peer_connection_create(&config);
+  peer_connection_oniceconnectionstatechange(g_pc, oniceconnectionstatechange);
+  peer_connection_ondatachannel(g_pc, onmessage, onopen, onclose);
+  peer_signaling_connect(CONFIG_SIGNALING_URL, CONFIG_SIGNALING_TOKEN, g_pc);
 
-// #if defined(CONFIG_ESP32S3_EYE)
-  // StackType_t* stack_memory = (StackType_t*)heap_caps_malloc(8192 * sizeof(StackType_t), MALLOC_CAP_SPIRAM);
-  // StaticTask_t task_buffer;
-  // if (stack_memory) {
-  //   xAudioTaskHandle = xTaskCreateStaticPinnedToCore(audio_task, "audio", 8192, NULL, 7, stack_memory, &task_buffer, 0);
-  // }
-// #endif
+#if defined(CONFIG_ESP32S3_EYE)
+  StackType_t* stack_memory = (StackType_t*)heap_caps_malloc(8192 * sizeof(StackType_t), MALLOC_CAP_SPIRAM);
+  StaticTask_t task_buffer;
+  if (stack_memory) {
+    xAudioTaskHandle = xTaskCreateStaticPinnedToCore(audio_task, "audio", 8192, NULL, 7, stack_memory, &task_buffer, 0);
+  }
+#endif
 
   // xTaskCreatePinnedToCore(camera_task, "camera", 4096, NULL, 8, &xCameraTaskHandle, 1);
 
