@@ -33,6 +33,8 @@ choice CONNECTION_TYPE
         bool "MQTT + UDP"
     config CONNECTION_TYPE_WEBSOCKET
         bool "Websocket"
+    config CONNECTION_TYPE_WEBRTC
+        bool "Webrtc"
 endchoice
 
 config WEBSOCKET_URL
@@ -48,6 +50,20 @@ config WEBSOCKET_ACCESS_TOKEN
     default "test-token"
     help
         Access token for websocket communication.
+
+config WEBRTC_URL
+    depends on CONNECTION_TYPE_WEBRTC
+    string "Webrtc URL"
+    default "mqtts://libpeer.com/public/fluffy-lazy-tiger"
+    help
+        Communication with the server through webrtc.
+
+config WEBRTC_ACCESS_TOKEN
+    depends on CONNECTION_TYPE_WEBRTC
+    string "Webrtc Access Token"
+    default "test-token"
+    help
+        Access token for webrtc communication.
 
 choice BOARD_TYPE
     prompt "Board Type"

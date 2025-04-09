@@ -6,6 +6,7 @@
 #include "audio_codec.h"
 #include "mqtt_protocol.h"
 #include "websocket_protocol.h"
+#include "webrtc_protocol.h"
 #include "font_awesome_symbols.h"
 #include "iot/thing_manager.h"
 #include "assets/lang_config.h"
@@ -356,6 +357,8 @@ void Application::Start() {
     display->SetStatus(Lang::Strings::LOADING_PROTOCOL);
 #ifdef CONFIG_CONNECTION_TYPE_WEBSOCKET
     protocol_ = std::make_unique<WebsocketProtocol>();
+#elif CONFIG_CONNECTION_TYPE_WEBRTC
+    protocol_ = std::make_unique<WebrtcProtocol>();
 #else
     protocol_ = std::make_unique<MqttProtocol>();
 #endif

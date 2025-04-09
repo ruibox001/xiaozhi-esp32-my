@@ -1,5 +1,5 @@
-#ifndef _WEBSOCKET_PROTOCOL_H_
-#define _WEBSOCKET_PROTOCOL_H_
+#ifndef _WEBRTC_PROTOCOL_H_
+#define _WEBRTC_PROTOCOL_H_
 
 
 #include "protocol.h"
@@ -20,8 +20,8 @@ public:
     bool IsAudioChannelOpened() const override;
 
 private:
-    EventGroupHandle_t event_group_handle_;
-    WebSocket* websocket_ = nullptr;
+    // EventGroupHandle_t event_group_handle_;
+    // WebSocket* websocket_ = nullptr;
 
     void ParseServerHello(const cJSON* root);
     void SendText(const std::string& text) override;
