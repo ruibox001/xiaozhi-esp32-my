@@ -7,7 +7,6 @@
 #include <web_socket.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
-#include "peer.h"
 
 class WebrtcProtocol : public Protocol {
 public:
