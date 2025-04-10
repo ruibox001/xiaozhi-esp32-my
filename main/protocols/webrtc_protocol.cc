@@ -53,7 +53,7 @@ void peer_signaling_task(void *arg) {
   
       peer_signaling_loop();
   
-      vTaskDelay(pdMS_TO_TICKS(10));
+      vTaskDelay(pdMS_TO_TICKS(100));
     }
   
 }
@@ -69,7 +69,7 @@ void peer_connection_task(void *arg) {
           xSemaphoreGive(xSemaphore);
       }
   
-      vTaskDelay(pdMS_TO_TICKS(1));
+      vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
 
@@ -89,9 +89,7 @@ void peer_start_setup() {
     ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
     ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
 
-    const char *mac_str = SystemInfo::GetMacAddress().c_str();
-    // strcpy(deviceid, SystemInfo::GetMacAddress().c_str());
-    strncpy(deviceid, mac_str, sizeof(mac_str));
+    strcpy(deviceid, SystemInfo::GetMacAddress().c_str());
     ESP_LOGI(TAG, "Device ID: %s", deviceid);
 
     xSemaphore = xSemaphoreCreateMutex();
@@ -123,7 +121,7 @@ void peer_start_setup() {
 
     xTaskCreatePinnedToCore(peer_connection_task, "peer_connection", 8192, NULL, 5, &xPcTaskHandle, 1);
 
-    xTaskCreatePinnedToCore(peer_signaling_task, "peer_signaling", 8192, NULL, 6, &xPsTaskHandle, 1);
+    xTaskCreatePinnedToCore(peer_signaling_task, "peer_signaling", 8192, NULL, 6, &xPsTaskHandle, 0);
 
     ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
     ESP_LOGI(TAG, "open https://sepfy.github.io/webrtc?deviceId=%s", deviceid);
@@ -131,7 +129,7 @@ void peer_start_setup() {
 }
 
 WebrtcProtocol::WebrtcProtocol() {
-    ESP_LOGI(TAG, "WebrtcProtocol started");
+    ESP_LOGI(TAG, "WebrtcProtocol started ---------------------- ");
     xSemaphore = xSemaphoreCreateMutex();
 
     peer_start_setup();
@@ -142,7 +140,7 @@ WebrtcProtocol::~WebrtcProtocol() {
 }
 
 void WebrtcProtocol::Start() {
-    peer_start_setup();
+    
 }
 
 void WebrtcProtocol::SendAudio(const std::vector<uint8_t>& data) {
