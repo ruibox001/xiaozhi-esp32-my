@@ -18,6 +18,9 @@ public:
     bool OpenAudioChannel() override;
     void CloseAudioChannel() override;
     bool IsAudioChannelOpened() const override;
+    void SendStopListening() override;
+    void SendAbortSpeaking(AbortReason reason) override;
+    
 
 private:
 
