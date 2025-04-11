@@ -20,6 +20,8 @@ PeerConnection* g_pc;
 PeerConnectionState eState = PEER_CONNECTION_CLOSED;
 int gDataChannelOpened = 0;
 
+static void peer_connection_task(void *arg);
+static void peer_signaling_task(void *arg);
 
 static void oniceconnectionstatechange(PeerConnectionState state, void *userdata) {
     ESP_LOGI(TAG, "PeerConnectionState: %d", state);
@@ -82,25 +84,29 @@ static void onclose(void *userdata) {
     gDataChannelOpened = 0;
 }
   
-void peer_signaling_task(void *arg) {
+static void peer_signaling_task(void *arg) {
   
     ESP_LOGI(TAG, "peer_signaling_task started");
-    for(;;) {
+    while (g_pc) {
       peer_signaling_loop();
       vTaskDelay(pdMS_TO_TICKS(100));
     }
+    ESP_LOGI(TAG, "peer_signaling_task ended");
+    vTaskDelete(nullptr);
 }
   
-void peer_connection_task(void *arg) {
-  
+static void peer_connection_task(void *arg) {
+
     ESP_LOGI(TAG, "peer_connection_task started");
-    for(;;) {
+    while(g_pc) {
       if (xSemaphoreTake(xSemaphore, portMAX_DELAY)) {
           peer_connection_loop(g_pc);
           xSemaphoreGive(xSemaphore);
       }
       vTaskDelay(pdMS_TO_TICKS(100));
     }
+    ESP_LOGI(TAG, "peer_connection_task ended");
+    vTaskDelete(nullptr);
 }
 
 void start_webrtc(WebrtcProtocol* self) {
@@ -164,6 +170,7 @@ void stop_webrtc() {
         xSemaphore = nullptr;           // 将指针设为 NULL，避免误用
     }
     peer_connection_destroy(g_pc);
+    g_pc = nullptr;
 }
 
 WebrtcProtocol::WebrtcProtocol() {
