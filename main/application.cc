@@ -383,6 +383,9 @@ void Application::Start() {
         if (thing_manager.GetStatesJson(states, false)) {
             protocol_->SendIotStates(states);
         }
+#ifdef CONFIG_CONNECTION_TYPE_WEBRTC
+        codec->EnableOutput(true);
+#endif
     });
     protocol_->OnAudioChannelClosed([this, &board]() {
         board.SetPowerSaveMode(true);
@@ -614,10 +617,12 @@ void Application::OnAudioOutput() {
         return;
     }
 
+#ifndef CONFIG_USE_REALTIME_CHAT
     if (device_state_ == kDeviceStateListening) {
         audio_decode_queue_.clear();
         return;
     }
+#endif
 
     auto opus = std::move(audio_decode_queue_.front());
     audio_decode_queue_.pop_front();

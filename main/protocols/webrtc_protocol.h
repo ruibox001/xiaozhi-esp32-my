@@ -20,8 +20,10 @@ public:
     bool IsAudioChannelOpened() const override;
     void SendStopListening() override;
     void SendAbortSpeaking(AbortReason reason) override;
-    
+    void SendIotStates(const std::string& states) override;
 
+    bool webrtc_started_ = false;
+    
 private:
 
     void ParseServerHello(const cJSON* root);
