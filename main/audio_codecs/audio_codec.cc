@@ -39,7 +39,7 @@ void AudioCodec::Start() {
 
     EnableInput(true);
     EnableOutput(true);
-    ESP_LOGI(TAG, "Audio codec started");
+    ESP_LOGI(TAG, "Audio codec started = %d", output_volume_);
 }
 
 void AudioCodec::SetOutputVolume(int volume) {

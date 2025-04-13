@@ -115,7 +115,7 @@ static void peer_connection_task(void *arg) {
           peer_connection_loop(g_pc);
           xSemaphoreGive(xSemaphore);
       }
-      vTaskDelay(pdMS_TO_TICKS(200));
+      vTaskDelay(pdMS_TO_TICKS(10));
     }
     ESP_LOGI(TAG, "peer_connection_task ended");
     vTaskDelete(nullptr);
@@ -191,7 +191,7 @@ void start_webrtc(WebrtcProtocol* self) {
     peer_signaling_set_config(&service_config);
     peer_signaling_join_channel();
 
-    xTaskCreatePinnedToCore(peer_connection_task, "peer_connection", 8192, NULL, 5, &xPcTaskHandle, 1);
+    xTaskCreatePinnedToCore(peer_connection_task, "peer_connection", 8192, NULL, 15, &xPcTaskHandle, 1);
 
     xTaskCreatePinnedToCore(peer_signaling_task, "peer_signaling", 8192, NULL, 6, &xPsTaskHandle, 0);
 

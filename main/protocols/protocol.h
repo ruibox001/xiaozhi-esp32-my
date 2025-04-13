@@ -64,7 +64,7 @@ public:
 
     // int server_sample_rate_ = 24000;
     int server_sample_rate_ = 16000;
-    int server_frame_duration_ = 60;
+    int server_frame_duration_ = 20;
     bool error_occurred_ = false;
     std::string session_id_;
     std::chrono::time_point<std::chrono::steady_clock> last_incoming_time_;

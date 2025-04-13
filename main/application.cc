@@ -469,8 +469,18 @@ void Application::Start() {
         vTaskDelete(NULL);
     }, "check_new_version", 4096 * 2, this, 2, nullptr);
 
-#if CONFIG_USE_AUDIO_PROCESSOR
+#ifdef CONFIG_USE_AUDIO_PROCESSOR
     audio_processor_.Initialize(codec, realtime_chat_enabled_);
+
+#ifdef CONFIG_USE_REALTIME_CHAT
+    audio_processor_.OnOutput([this](std::vector<int16_t>&& data) {
+        background_task_->Schedule([this, data = std::move(data)]() mutable {
+            opus_encoder_->Encode(std::move(data), [this](std::vector<uint8_t>&& opus) {
+                protocol_->SendAudio(std::move(opus));
+            });
+        });
+    });
+#else
     audio_processor_.OnOutput([this](std::vector<int16_t>&& data) {
         background_task_->Schedule([this, data = std::move(data)]() mutable {
             opus_encoder_->Encode(std::move(data), [this](std::vector<uint8_t>&& opus) {
@@ -493,6 +503,8 @@ void Application::Start() {
             });
         }
     });
+#endif
+
 #endif
 
 #if CONFIG_USE_WAKE_WORD_DETECT
@@ -659,6 +671,7 @@ void Application::OnAudioInput() {
         return;
     }
 #endif
+
 #if CONFIG_USE_AUDIO_PROCESSOR
     if (audio_processor_.IsRunning()) {
         ReadAudio(data, 16000, audio_processor_.GetFeedSize());
