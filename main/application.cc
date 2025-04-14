@@ -11,6 +11,9 @@
 #include "iot/thing_manager.h"
 #include "assets/lang_config.h"
 
+#include "webrtc/webrtc_manager.h"
+#include "webrtc/app_webrtc.h"
+
 #include <cstring>
 #include <esp_log.h>
 #include <cJSON.h>
@@ -893,4 +896,35 @@ bool Application::CanEnterSleepMode() {
 
     // Now it is safe to enter sleep mode
     return true;
+}
+
+void Application::ButtonPressedDown() {
+    ESP_LOGI(TAG, "ButtonPressedDown");
+    if (!WebrtcManager::instance().is_created()) {
+        StartWebrtcFunction();
+    }
+    else
+    {
+        StopWebrtcFunction();
+    }
+}
+
+
+//webrtc相关
+void Application::StartWebrtcFunction() {
+#if CONFIG_USE_WEBRTC_CHAT
+    //初始化webrtc
+    auto& app_webrtc = WebrtcManager::instance().get();
+    //设置webrtc的回调函数，处理接受都得的音频数据
+    app_webrtc->OnIncomingAudioData([this](std::vector<uint8_t>&& data) {
+        
+    });
+#endif
+}
+
+void Application::StopWebrtcFunction() {
+#if CONFIG_USE_WEBRTC_CHAT
+        //销毁webrtc
+        WebrtcManager::instance().destroy();
+#endif
 }

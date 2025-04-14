@@ -22,12 +22,13 @@ public:
     void StartConnect();
     void StartAudio();
     void StopAudio();
-    void IncomingAudio(uint8_t *data, size_t size);
+    void WebrtcSendAudioData(const std::vector<uint8_t>& data);
+    void OnIncomingAudioData(std::function<void(std::vector<uint8_t>&& data)> callback);
     
     bool webrtc_started_ = false;
     
 private:
-    
+    std::function<void(std::vector<uint8_t>&& data)> on_incoming_audio_;
 
 };
 

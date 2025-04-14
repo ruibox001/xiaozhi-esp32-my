@@ -17,7 +17,6 @@
 #include "protocol.h"
 #include "ota.h"
 #include "background_task.h"
-#include "app_webrtc.h"
 
 #if CONFIG_USE_WAKE_WORD_DETECT
 #include "wake_word_detect.h"
@@ -44,6 +43,7 @@ enum DeviceState {
 };
 
 #define OPUS_FRAME_DURATION_MS 60
+#define CONFIG_USE_WEBRTC_CHAT 1
 
 class Application {
 public:
@@ -71,6 +71,7 @@ public:
     void WakeWordInvoke(const std::string& wake_word);
     void PlaySound(const std::string_view& sound);
     bool CanEnterSleepMode();
+    void ButtonPressedDown();
 
 private:
     Application();
@@ -125,6 +126,9 @@ private:
     void OnClockTimer();
     void SetListeningMode(ListeningMode mode);
     void AudioLoop();
+
+    void StartWebrtcFunction();
+    void StopWebrtcFunction();
 };
 
 #endif // _APPLICATION_H_

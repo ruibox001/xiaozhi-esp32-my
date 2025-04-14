@@ -12,13 +12,14 @@ set(SOURCES "audio_codecs/audio_codec.cc"
             "protocols/protocol.cc"
             "iot/thing.cc"
             "iot/thing_manager.cc"
+            "webrtc/app_webrtc.cc"
+            "webrtc/webrtc_manager.cc"
             "system_info.cc"
             "application.cc"
             "ota.cc"
             "settings.cc"
             "background_task.cc"
             "main.cc"
-            "app_webrtc.cc"
             )
 
 set(INCLUDE_DIRS "." "display" "audio_codecs" "protocols" "audio_processing")
