@@ -63,7 +63,7 @@ static void onmessage(char *msg, size_t len, void *userdata, uint16_t sid) {
 void on_audio_track_callback(uint8_t *data, size_t size, void *userdata) {
     // Here you can process the incoming audio data
     // For demonstration, we'll just print the size of the data received
-    printf("Received audio data of size: %zu\n", size);
+    // printf("Received audio data of size: %zu\n", size);
 
     // 3. 从 user_data 获取对象实例
     WebrtcProtocol* self = static_cast<WebrtcProtocol*>(userdata);

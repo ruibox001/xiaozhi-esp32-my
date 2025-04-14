@@ -17,6 +17,7 @@
 #include "protocol.h"
 #include "ota.h"
 #include "background_task.h"
+#include "app_webrtc.h"
 
 #if CONFIG_USE_WAKE_WORD_DETECT
 #include "wake_word_detect.h"

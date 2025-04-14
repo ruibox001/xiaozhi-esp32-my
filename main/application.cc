@@ -366,6 +366,8 @@ void Application::Start() {
         SetDeviceState(kDeviceStateIdle);
         Alert(Lang::Strings::ERROR, message.c_str(), "sad", Lang::Sounds::P3_EXCLAMATION);
     });
+
+    //收到音频数据
     protocol_->OnIncomingAudio([this](std::vector<uint8_t>&& data) {
         std::lock_guard<std::mutex> lock(mutex_);
         audio_decode_queue_.emplace_back(std::move(data));
@@ -472,7 +474,7 @@ void Application::Start() {
 #ifdef CONFIG_USE_AUDIO_PROCESSOR
     audio_processor_.Initialize(codec, realtime_chat_enabled_);
 
-#ifdef CONFIG_USE_REALTIME_CHAT
+#ifdef CONFIG_CONNECTION_TYPE_WEBRTC
     audio_processor_.OnOutput([this](std::vector<int16_t>&& data) {
         background_task_->Schedule([this, data = std::move(data)]() mutable {
             opus_encoder_->Encode(std::move(data), [this](std::vector<uint8_t>&& opus) {
@@ -629,7 +631,7 @@ void Application::OnAudioOutput() {
         return;
     }
 
-#ifndef CONFIG_USE_REALTIME_CHAT
+#ifndef CONFIG_CONNECTION_TYPE_WEBRTC
     if (device_state_ == kDeviceStateListening) {
         audio_decode_queue_.clear();
         return;
