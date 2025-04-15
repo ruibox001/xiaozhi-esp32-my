@@ -33,11 +33,11 @@ void AppWebrtc::StartConnect() {
 }
 
 void AppWebrtc::StartAudio() {
-    
+    ESP_LOGI(TAG, "StartAudio %p", this);
 }
 
 void AppWebrtc::StopAudio() {
-    
+    ESP_LOGI(TAG, "StopAudio %p", this);
 }
 
 void AppWebrtc::WebrtcSendAudioData(const std::vector<uint8_t>& data) {
@@ -49,5 +49,6 @@ void AppWebrtc::WebrtcSendAudioData(const std::vector<uint8_t>& data) {
 
 // 把接受的音频数据解码成PCM数据，放到队列中播放
 void AppWebrtc::OnIncomingAudioData(std::function<void(std::vector<uint8_t>&& data)> callback) {
+    ESP_LOGI(TAG, "set OnIncomingAudioData %p - %p", this, callback);
     on_incoming_audio_ = callback;
 }

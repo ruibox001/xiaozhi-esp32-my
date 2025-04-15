@@ -16,13 +16,13 @@ WebrtcManager::WebrtcManager() {
 }
 
 WebrtcManager::~WebrtcManager() {
-    destroy();
+    webrtc_destroy();
     if (mutex_) {
         vSemaphoreDelete(mutex_);
     }
 }
 
-std::unique_ptr<AppWebrtc>& WebrtcManager::get() {
+std::unique_ptr<AppWebrtc>& WebrtcManager::webrtc_get() {
     if (app_webrtc_) return app_webrtc_;
 
     if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
@@ -39,7 +39,7 @@ std::unique_ptr<AppWebrtc>& WebrtcManager::get() {
     return app_webrtc_;
 }
 
-void WebrtcManager::destroy() {
+void WebrtcManager::webrtc_destroy() {
     if (!mutex_ || !app_webrtc_) return;
 
     if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
@@ -56,7 +56,7 @@ void WebrtcManager::destroy() {
     ESP_LOGI(TAG, "webrtc已销毁");
 }
 
-bool WebrtcManager::is_created() const {
+bool WebrtcManager::webrtc_is_created() const {
     if (!mutex_) return false;
 
     if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {

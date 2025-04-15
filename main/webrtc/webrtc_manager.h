@@ -13,13 +13,16 @@ public:
     static WebrtcManager& instance();
     
     // 获取实例（如果不存在则自动创建）
-    std::unique_ptr<AppWebrtc>& get();
+    std::unique_ptr<AppWebrtc>& webrtc_get();
     
     // 销毁实例
-    void destroy();
+    void webrtc_destroy();
     
     // 检查是否已创建
-    bool is_created() const;
+    bool webrtc_is_created() const;
+
+    // webrtc运行状态
+    bool webrtc_is_runing = false;
 
 private:
     WebrtcManager();
