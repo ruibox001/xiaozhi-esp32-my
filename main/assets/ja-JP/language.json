@@ -46,6 +46,9 @@
 
         "VOLUME": "音量 ",
         "MUTED": "ミュートされています",
-        "MAX_VOLUME": "最大音量"
+        "MAX_VOLUME": "最大音量",
+
+        "WEBRTC_CONNECTING": "语音連接中",
+        "WEBRTC_SPEAKING": "语音对话中"
     }
 }

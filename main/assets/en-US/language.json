@@ -47,6 +47,9 @@
 
         "VOLUME": "Volume ",
         "MUTED": "Muted",
-        "MAX_VOLUME": "Max volume"
+        "MAX_VOLUME": "Max volume",
+
+        "WEBRTC_CONNECTING": "Connecting",
+        "WEBRTC_SPEAKING": "Communication"
     }
 }

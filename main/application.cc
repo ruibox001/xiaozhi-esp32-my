@@ -612,14 +612,22 @@ void Application::AudioLoop() {
     while (true) {
         OnAudioInput();
         if (codec->output_enabled()) {
-            OnAudioOutput();
+            OnAudioOutput(codec);
         }
     }
 }
 
-void Application::OnAudioOutput() {
+void Application::OnAudioOutput(AudioCodec* codec) {
+
+#if CONFIG_USE_WEBRTC_CHAT
+    
+    if (WebrtcDecodeVoiceAndPlay(codec)) {
+        return;
+    }
+#endif
+
+
     auto now = std::chrono::steady_clock::now();
-    auto codec = Board::GetInstance().GetAudioCodec();
     const int max_silence_seconds = 10;
 
     std::unique_lock<std::mutex> lock(mutex_);
@@ -913,21 +921,136 @@ void Application::ButtonPressedDown() {
 //webrtc相关
 void Application::StartWebrtcFunction() {
 #if CONFIG_USE_WEBRTC_CHAT
+    ESP_LOGI(TAG, "StartWebrtc ---------------------- > 00");
+    //关闭小智
+    WebrtcStopXiaozhi();
+
     //初始化webrtc
     auto& app_webrtc = WebrtcManager::Instance().WebrtcGet();
-    app_webrtc->StartAudio();
+    WebrtcManager::Instance().WebrtcSetState(true);
     //设置webrtc的回调函数，处理接受都得的音频数据
     app_webrtc->OnIncomingAudioData([this](std::vector<uint8_t>&& data) {
-        
+        std::lock_guard<std::mutex> lock(mutex_);
+        audio_decode_queue_.emplace_back(std::move(data));
     });
+    app_webrtc->StartConnect();
+
 #endif
 }
 
 void Application::StopWebrtcFunction() {
 #if CONFIG_USE_WEBRTC_CHAT
+    ESP_LOGI(TAG, "StopWebrtc ---------------------- > 11");
     auto& app_webrtc = WebrtcManager::Instance().WebrtcGet();
     app_webrtc->StopAudio();
+    app_webrtc->StopConnect();
     //销毁webrtc
     WebrtcManager::Instance().WebrtcSetState(false);
+    
+    //开启小智
+    WebrtcStartXiaozhi();
 #endif
+}
+
+bool Application::WebrtcDecodeVoiceAndPlay(AudioCodec* codec){
+
+    if (!WebrtcManager::Instance().WebrtcIsRuning()) {
+        return false;
+    }
+    
+    auto& app_webrtc = WebrtcManager::Instance().WebrtcGet();
+    ESP_LOGW(TAG, "webrtc is create = 00");
+    if (!app_webrtc->webrtc_is_runing) {
+        return true;
+    }
+
+    ESP_LOGW(TAG, "webrtc is running = 11");
+    std::unique_lock<std::mutex> lock(mutex_);
+    if (audio_decode_queue_.empty()) {
+        return true;
+    }
+
+    auto opus = std::move(audio_decode_queue_.front());
+    audio_decode_queue_.pop_front();
+    lock.unlock();
+
+    std::vector<int16_t> pcm;
+    if (!opus_decoder_->Decode(std::move(opus), pcm)) {
+        return true;
+    }
+    codec->OutputData(pcm);
+    return true;
+}
+
+void Application::WebrtcPlayVoiceData(uint8_t *data, size_t size) {
+    auto codec = Board::GetInstance().GetAudioCodec();
+
+    // 1. 将 data 转换为 std::vector<uint8_t>
+    std::vector<uint8_t> opus_data(data, data + size);
+
+    // 2. 准备接收 PCM 数据的 vector
+    std::vector<int16_t> pcm_data;
+
+    // 3. 调用解码函数
+    if (opus_decoder_->Decode(std::move(opus_data), pcm_data)) {
+        // 解码成功，pcm_data 现在包含解码后的音频数据
+        // 可以在这里处理 PCM 数据，比如播放或传递给其他模块
+        codec->OutputData(pcm_data);
+    }
+}
+
+//关闭小智
+void Application::WebrtcStopXiaozhi(){
+    
+    SetDeviceState(kDeviceStateIdle);
+
+    auto& board = Board::GetInstance();
+    auto display = board.GetDisplay();
+
+    protocol_->CloseAudioChannel();
+    display->SetStatus(Lang::Strings::WEBRTC_CONNECTING);
+    display->SetChatMessage("system", "");
+
+#if CONFIG_USE_WAKE_WORD_DETECT
+    wake_word_detect_.StopDetection();
+#endif
+    // 预先关闭音频输出，避免升级过程有音频操作
+    auto codec = board.GetAudioCodec();
+    AbortSpeaking(kAbortReasonNone);
+    // codec->EnableInput(false);
+    codec->EnableOutput(false);
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        audio_decode_queue_.clear();
+    }
+    background_task_->WaitForCompletion();
+    delete background_task_;
+    background_task_ = nullptr;
+    vTaskDelay(pdMS_TO_TICKS(200));
+}
+
+//启动小智
+void Application::WebrtcStartXiaozhi(){
+
+    auto& board = Board::GetInstance();
+    auto display = board.GetDisplay();
+
+    last_output_time_ = std::chrono::steady_clock::now();
+    display->SetStatus(Lang::Strings::STANDBY);
+    display->SetChatMessage("system", "");
+
+    background_task_ = new BackgroundTask(4096 * 8);
+    SetDeviceState(kDeviceStateIdle);
+    audio_processor_.Start();
+
+    // 预先关闭音频输出，避免升级过程有音频操作
+    auto codec = board.GetAudioCodec();
+    codec->EnableInput(true);
+    codec->EnableOutput(true);
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        audio_decode_queue_.clear();
+    }
+    wake_word_detect_.StartDetection();
+    aborted_ = false;
 }

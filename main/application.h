@@ -39,7 +39,8 @@ enum DeviceState {
     kDeviceStateSpeaking,
     kDeviceStateUpgrading,
     kDeviceStateActivating,
-    kDeviceStateFatalError
+    kDeviceStateFatalError,
+    kDeviceStateWebrtc,
 };
 
 #define OPUS_FRAME_DURATION_MS 60
@@ -117,7 +118,7 @@ private:
 
     void MainLoop();
     void OnAudioInput();
-    void OnAudioOutput();
+    void OnAudioOutput(AudioCodec* codec);
     void ReadAudio(std::vector<int16_t>& data, int sample_rate, int samples);
     void ResetDecoder();
     void SetDecodeSampleRate(int sample_rate, int frame_duration);
@@ -129,6 +130,10 @@ private:
 
     void StartWebrtcFunction();
     void StopWebrtcFunction();
+    void WebrtcStartXiaozhi();
+    void WebrtcStopXiaozhi();
+    bool WebrtcDecodeVoiceAndPlay(AudioCodec* codec);
+    void WebrtcPlayVoiceData(uint8_t *data, size_t size);
 };
 
 #endif // _APPLICATION_H_

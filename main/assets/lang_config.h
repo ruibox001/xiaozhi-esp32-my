@@ -49,6 +49,8 @@ namespace Lang {
         constexpr const char* VERSION = "版本 ";
         constexpr const char* VOLUME = "音量 ";
         constexpr const char* WARNING = "警告";
+        constexpr const char* WEBRTC_CONNECTING = "语音连接中";
+        constexpr const char* WEBRTC_SPEAKING = "语音对话中";
         constexpr const char* WIFI_CONFIG_MODE = "配网模式";
     }
 
