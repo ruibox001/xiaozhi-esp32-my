@@ -50,6 +50,7 @@ bool WebsocketProtocol::IsAudioChannelOpened() const {
 
 void WebsocketProtocol::CloseAudioChannel() {
     if (websocket_ != nullptr) {
+        websocket_->Close();
         delete websocket_;
         websocket_ = nullptr;
     }

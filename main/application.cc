@@ -1007,7 +1007,13 @@ void Application::WebrtcStopXiaozhi(){
     auto& board = Board::GetInstance();
     auto display = board.GetDisplay();
 
-    protocol_->CloseAudioChannel();
+    //这里要关闭小智的网络连接
+    do {
+        vTaskDelay(pdMS_TO_TICKS(300));
+        ESP_LOGW(TAG, "Waiting for webrtc to stop");
+    } while (GetDeviceState() == kDeviceStateSpeaking);
+    protocol_->CloseAudioChannel();  // 未播放完音频可能会崩溃，所以前面等待一下
+
     display->SetStatus(Lang::Strings::WEBRTC_CONNECTING);
     display->SetChatMessage("system", "");
 
@@ -1023,10 +1029,10 @@ void Application::WebrtcStopXiaozhi(){
         std::lock_guard<std::mutex> lock(mutex_);
         audio_decode_queue_.clear();
     }
+    audio_processor_.Stop();
     background_task_->WaitForCompletion();
     delete background_task_;
     background_task_ = nullptr;
-    vTaskDelay(pdMS_TO_TICKS(200));
 }
 
 //启动小智
@@ -1040,8 +1046,9 @@ void Application::WebrtcStartXiaozhi(){
     display->SetChatMessage("system", "");
 
     background_task_ = new BackgroundTask(4096 * 8);
+    // audio_processor_.Start(); //不能打开这个，不然后续无法初始化listening
+
     SetDeviceState(kDeviceStateIdle);
-    audio_processor_.Start();
 
     // 预先关闭音频输出，避免升级过程有音频操作
     auto codec = board.GetAudioCodec();
