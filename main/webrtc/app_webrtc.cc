@@ -7,12 +7,6 @@
 #include <arpa/inet.h>
 #include <esp_app_desc.h>
 
-#include "board.h"
-#include "display.h"
-#include "system_info.h"
-#include "audio_codec.h"
-#include "assets/lang_config.h"
-
 // #include "peer.h"
 
 #define TAG "AppWebrtc"
@@ -29,7 +23,19 @@ AppWebrtc::~AppWebrtc() {
 }
 
 void AppWebrtc::StartConnect() {
-    
+    if (webrtc_is_runing) {
+        return;
+    }
+    webrtc_is_runing = true;
+    ESP_LOGI(TAG, "StartConnect %p", this);
+}
+
+void AppWebrtc::StopConnect() {
+    if (!webrtc_is_runing) {
+        return;
+    }
+    webrtc_is_runing = false;
+    ESP_LOGI(TAG, "StopConnect %p", this);
 }
 
 void AppWebrtc::StartAudio() {
@@ -45,6 +51,7 @@ void AppWebrtc::SendAudioData(const std::vector<uint8_t>& data) {
     //     return;
     // }
     // peer_connection_send_audio(g_pc, data.data(), data.size());
+    ESP_LOGI(TAG, "SendAudioData %p", this);
 }
 
 // 把接受的音频数据解码成PCM数据，放到队列中播放

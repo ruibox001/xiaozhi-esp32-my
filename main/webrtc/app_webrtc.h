@@ -10,7 +10,6 @@
 
 #include <opus_encoder.h>
 #include <opus_decoder.h>
-#include <opus_resampler.h>
 
 
 class AppWebrtc {
@@ -20,8 +19,11 @@ public:
     ~AppWebrtc();
 
     void StartConnect();
+    void StopConnect();
+
     void StartAudio();
     void StopAudio();
+
     void SendAudioData(const std::vector<uint8_t>& data);
     void OnIncomingAudioData(std::function<void(std::vector<uint8_t>&& data)> callback);
     
@@ -29,6 +31,7 @@ public:
     bool webrtc_is_runing = false;
     
 private:
+
     std::function<void(std::vector<uint8_t>&& data)> on_incoming_audio_;
 
 };
