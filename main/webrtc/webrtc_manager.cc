@@ -3,7 +3,7 @@
 
 #define TAG "WebrtcManager"
 
-WebrtcManager& WebrtcManager::instance() {
+WebrtcManager& WebrtcManager::Instance() {
     static WebrtcManager instance;
     return instance;
 }
@@ -16,13 +16,16 @@ WebrtcManager::WebrtcManager() {
 }
 
 WebrtcManager::~WebrtcManager() {
-    webrtc_destroy();
+    if (app_webrtc_) {
+        ESP_LOGI(TAG, "AppWebrtc destroyed = %p", app_webrtc_.get());
+        app_webrtc_ = nullptr;
+    }
     if (mutex_) {
         vSemaphoreDelete(mutex_);
     }
 }
 
-std::unique_ptr<AppWebrtc>& WebrtcManager::webrtc_get() {
+std::unique_ptr<AppWebrtc>& WebrtcManager::WebrtcGet() {
     if (app_webrtc_) return app_webrtc_;
 
     if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
@@ -35,11 +38,11 @@ std::unique_ptr<AppWebrtc>& WebrtcManager::webrtc_get() {
     }
 
     xSemaphoreGive(mutex_);
-    ESP_LOGI(TAG, "webrtc instance %p - %p", this, app_webrtc_.get());
+    ESP_LOGI(TAG, "webrtc create instance %p", app_webrtc_.get());
     return app_webrtc_;
 }
 
-void WebrtcManager::webrtc_destroy() {
+void WebrtcManager::WebrtcDestroy() {
     if (!mutex_ || !app_webrtc_) return;
 
     if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
@@ -56,7 +59,7 @@ void WebrtcManager::webrtc_destroy() {
     ESP_LOGI(TAG, "webrtc已销毁");
 }
 
-bool WebrtcManager::webrtc_is_created() const {
+bool WebrtcManager::WebrtcIsRuning() const {
     if (!mutex_) return false;
 
     if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
@@ -67,4 +70,26 @@ bool WebrtcManager::webrtc_is_created() const {
     bool created = (app_webrtc_ != nullptr);
     xSemaphoreGive(const_cast<SemaphoreHandle_t>(mutex_));
     return created;
+}
+
+void WebrtcManager::WebrtcSetState(bool start) {
+
+    if (xSemaphoreTake(mutex_, portMAX_DELAY) != pdTRUE) {
+        ESP_LOGE(TAG, "Failed to acquire mutex");
+        return;
+    }
+
+    if (start) {
+        if (!app_webrtc_) {
+            app_webrtc_ = std::make_unique<AppWebrtc>();
+            ESP_LOGI(TAG, "AppWebrtc create %p", app_webrtc_.get());
+        }
+    } else {
+        if (app_webrtc_) {
+            ESP_LOGI(TAG, "AppWebrtc destroyed = %p", app_webrtc_.get());
+            app_webrtc_ = nullptr;
+        }
+    }
+
+    xSemaphoreGive(const_cast<SemaphoreHandle_t>(mutex_));
 }

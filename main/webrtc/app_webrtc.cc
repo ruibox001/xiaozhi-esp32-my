@@ -40,7 +40,7 @@ void AppWebrtc::StopAudio() {
     ESP_LOGI(TAG, "StopAudio %p", this);
 }
 
-void AppWebrtc::WebrtcSendAudioData(const std::vector<uint8_t>& data) {
+void AppWebrtc::SendAudioData(const std::vector<uint8_t>& data) {
     // if (gDataChannelOpened == 0) {
     //     return;
     // }

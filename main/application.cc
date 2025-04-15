@@ -900,7 +900,7 @@ bool Application::CanEnterSleepMode() {
 
 void Application::ButtonPressedDown() {
     ESP_LOGI(TAG, "ButtonPressedDown");
-    if (!WebrtcManager::instance().webrtc_is_created()) {
+    if (!WebrtcManager::Instance().WebrtcIsRuning()) {
         StartWebrtcFunction();
     }
     else
@@ -914,7 +914,7 @@ void Application::ButtonPressedDown() {
 void Application::StartWebrtcFunction() {
 #if CONFIG_USE_WEBRTC_CHAT
     //初始化webrtc
-    auto& app_webrtc = WebrtcManager::instance().webrtc_get();
+    auto& app_webrtc = WebrtcManager::Instance().WebrtcGet();
     app_webrtc->StartAudio();
     //设置webrtc的回调函数，处理接受都得的音频数据
     app_webrtc->OnIncomingAudioData([this](std::vector<uint8_t>&& data) {
@@ -925,9 +925,9 @@ void Application::StartWebrtcFunction() {
 
 void Application::StopWebrtcFunction() {
 #if CONFIG_USE_WEBRTC_CHAT
-    auto& app_webrtc = WebrtcManager::instance().webrtc_get();
+    auto& app_webrtc = WebrtcManager::Instance().WebrtcGet();
     app_webrtc->StopAudio();
     //销毁webrtc
-    WebrtcManager::instance().webrtc_destroy();
+    WebrtcManager::Instance().WebrtcSetState(false);
 #endif
 }

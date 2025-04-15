@@ -10,23 +10,24 @@ class AppWebrtc; // 前向声明
 class WebrtcManager {
 public:
     // 获取单例实例
-    static WebrtcManager& instance();
+    static WebrtcManager& Instance();
     
     // 获取实例（如果不存在则自动创建）
-    std::unique_ptr<AppWebrtc>& webrtc_get();
+    std::unique_ptr<AppWebrtc>& WebrtcGet();
     
-    // 销毁实例
-    void webrtc_destroy();
+    // webrtc获取运行状态
+    bool WebrtcIsRuning() const;
+
+    //设置webrtc状态
+    void WebrtcSetState(bool start);
+
     
-    // 检查是否已创建
-    bool webrtc_is_created() const;
-
-    // webrtc运行状态
-    bool webrtc_is_runing = false;
-
 private:
     WebrtcManager();
     ~WebrtcManager();
+
+    // 销毁实例，建议外部调用WebrtcSetState(false)替代
+    void WebrtcDestroy();
     
     std::unique_ptr<AppWebrtc> app_webrtc_ = nullptr;
     SemaphoreHandle_t mutex_ = nullptr;
