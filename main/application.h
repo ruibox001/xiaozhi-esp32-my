@@ -133,7 +133,9 @@ private:
     void WebrtcStartXiaozhi();
     void WebrtcStopXiaozhi();
     bool WebrtcDecodeVoiceAndPlay(AudioCodec* codec);
-    void WebrtcPlayVoiceData(uint8_t *data, size_t size);
+    void Play(std::vector<int16_t> pcm_data);
+    void WebrtcEncodeVoiceData(std::vector<int16_t>&& data);
+
 };
 
 #endif // _APPLICATION_H_
