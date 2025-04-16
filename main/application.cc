@@ -35,6 +35,7 @@ static const char* const STATE_STRINGS[] = {
     "upgrading",
     "activating",
     "fatal_error",
+    "webrtc_chat",
     "invalid_state"
 };
 
@@ -891,6 +892,8 @@ bool Application::CanEnterSleepMode() {
     return true;
 }
 
+
+//webrtc相关 ----------------------------------------------------->
 void Application::ButtonPressedDown() {
     ESP_LOGI(TAG, "ButtonPressedDown");
     if (!WebrtcManager::Instance().WebrtcIsRuning()) {
@@ -902,8 +905,6 @@ void Application::ButtonPressedDown() {
     }
 }
 
-
-//webrtc相关
 void Application::StartWebrtcFunction() {
 #if CONFIG_USE_WEBRTC_CHAT
     ESP_LOGI(TAG, "StartWebrtc ---------------------- > 00");
@@ -923,7 +924,7 @@ void Application::StartWebrtcFunction() {
             auto codec = Board::GetInstance().GetAudioCodec();
             codec->OutputData(pcm);
         });
-        app_webrtc->StartConnect(opus_encoder_.get(), opus_decoder_.get());
+        app_webrtc->StartConnect(opus_encoder_.get(), opus_decoder_.get(), SystemInfo::GetMacAddress().c_str());
     });
 
 #endif
@@ -935,7 +936,6 @@ void Application::StopWebrtcFunction() {
     Schedule([this]() {
         auto& app_webrtc = WebrtcManager::Instance().WebrtcGet();
         app_webrtc->StopAudio();
-        app_webrtc->StopConnect();
         //销毁webrtc
         WebrtcManager::Instance().WebrtcSetState(false);
     });
@@ -1009,39 +1009,39 @@ void Application::WebrtcEncodeVoiceData(std::vector<int16_t>&& data) {
 
 //关闭小智
 void Application::WebrtcStopXiaozhi(){
-    Schedule([this]() {
-        SetDeviceState(kDeviceStateIdle);
 
-        auto& board = Board::GetInstance();
-        auto display = board.GetDisplay();
+    SetDeviceState(kDeviceStateIdle);
 
-        //这里要关闭小智的网络连接
-        do {
-            vTaskDelay(pdMS_TO_TICKS(300));
-            ESP_LOGW(TAG, "Waiting for audio paly finish");
-        } while (GetDeviceState() == kDeviceStateSpeaking);
-        protocol_->CloseAudioChannel();  // 未播放完音频可能会崩溃，所以前面等待一下
+    auto& board = Board::GetInstance();
+    auto display = board.GetDisplay();
 
-        display->SetStatus(Lang::Strings::WEBRTC_CONNECTING);
-        display->SetChatMessage("system", "");
+    //这里要关闭小智的网络连接
+    do {
+        vTaskDelay(pdMS_TO_TICKS(300));
+        ESP_LOGW(TAG, "Waiting for audio paly finish");
+    } while (GetDeviceState() == kDeviceStateSpeaking);
+    protocol_->CloseAudioChannel();  // 未播放完音频可能会崩溃，所以前面等待一下
 
-    #if CONFIG_USE_WAKE_WORD_DETECT
-        wake_word_detect_.StopDetection();
-    #endif
-        // 预先关闭音频输出，避免升级过程有音频操作
-        auto codec = board.GetAudioCodec();
-        AbortSpeaking(kAbortReasonNone);
-        // codec->EnableInput(false);
-        codec->EnableOutput(false);
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            audio_decode_queue_.clear();
-        }
-        audio_processor_.Stop();
-        background_task_->WaitForCompletion();
-        delete background_task_;
-        background_task_ = nullptr;
-    });
+    display->SetStatus(Lang::Strings::WEBRTC_CONNECTING);
+    display->SetChatMessage("system", "");
+
+#if CONFIG_USE_WAKE_WORD_DETECT
+    wake_word_detect_.StopDetection();
+#endif
+    // 预先关闭音频输出，避免升级过程有音频操作
+    auto codec = board.GetAudioCodec();
+    AbortSpeaking(kAbortReasonNone);
+    // codec->EnableInput(false);
+    codec->EnableOutput(false);
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        audio_decode_queue_.clear();
+    }
+    audio_processor_.Stop();
+    background_task_->WaitForCompletion();
+    delete background_task_;
+    background_task_ = nullptr;
+    
 }
 
 //启动小智
