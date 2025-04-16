@@ -360,8 +360,6 @@ void Application::Start() {
     display->SetStatus(Lang::Strings::LOADING_PROTOCOL);
 #ifdef CONFIG_CONNECTION_TYPE_WEBSOCKET
     protocol_ = std::make_unique<WebsocketProtocol>();
-#elif CONFIG_CONNECTION_TYPE_WEBRTC
-    protocol_ = std::make_unique<WebrtcProtocol>();
 #else
     protocol_ = std::make_unique<MqttProtocol>();
 #endif
@@ -388,9 +386,6 @@ void Application::Start() {
         if (thing_manager.GetStatesJson(states, false)) {
             protocol_->SendIotStates(states);
         }
-#ifdef CONFIG_CONNECTION_TYPE_WEBRTC
-        codec->EnableOutput(true);
-#endif
     });
     protocol_->OnAudioChannelClosed([this, &board]() {
         board.SetPowerSaveMode(true);
@@ -476,16 +471,6 @@ void Application::Start() {
 
 #ifdef CONFIG_USE_AUDIO_PROCESSOR
     audio_processor_.Initialize(codec, realtime_chat_enabled_);
-
-#ifdef CONFIG_CONNECTION_TYPE_WEBRTC
-    audio_processor_.OnOutput([this](std::vector<int16_t>&& data) {
-        background_task_->Schedule([this, data = std::move(data)]() mutable {
-            opus_encoder_->Encode(std::move(data), [this](std::vector<uint8_t>&& opus) {
-                protocol_->SendAudio(std::move(opus));
-            });
-        });
-    });
-#else
     audio_processor_.OnOutput([this](std::vector<int16_t>&& data) {
         background_task_->Schedule([this, data = std::move(data)]() mutable {
             opus_encoder_->Encode(std::move(data), [this](std::vector<uint8_t>&& opus) {
@@ -508,8 +493,6 @@ void Application::Start() {
             });
         }
     });
-#endif
-
 #endif
 
 #if CONFIG_USE_WAKE_WORD_DETECT
@@ -642,12 +625,10 @@ void Application::OnAudioOutput(AudioCodec* codec) {
         return;
     }
 
-#ifndef CONFIG_CONNECTION_TYPE_WEBRTC
     if (device_state_ == kDeviceStateListening) {
         audio_decode_queue_.clear();
         return;
     }
-#endif
 
     auto opus = std::move(audio_decode_queue_.front());
     audio_decode_queue_.pop_front();
@@ -1010,7 +991,7 @@ void Application::WebrtcStopXiaozhi(){
     //这里要关闭小智的网络连接
     do {
         vTaskDelay(pdMS_TO_TICKS(300));
-        ESP_LOGW(TAG, "Waiting for webrtc to stop");
+        ESP_LOGW(TAG, "Waiting for audio paly finish");
     } while (GetDeviceState() == kDeviceStateSpeaking);
     protocol_->CloseAudioChannel();  // 未播放完音频可能会崩溃，所以前面等待一下
 
