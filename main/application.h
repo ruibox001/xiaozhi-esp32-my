@@ -135,6 +135,7 @@ private:
     bool WebrtcDecodeVoiceAndPlay(AudioCodec* codec);
     void Play(std::vector<int16_t> pcm_data);
     void WebrtcEncodeVoiceData(std::vector<int16_t>&& data);
+    void WebrtcStartVoice();
 
 };
 

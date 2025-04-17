@@ -549,7 +549,7 @@ void Application::OnClockTimer() {
     if (clock_ticks_ % 10 == 0) {
         int free_sram = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
         int min_free_sram = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL);
-        ESP_LOGI(TAG, "Free internal: %u minimal internal: %u", free_sram, min_free_sram);
+        ESP_LOGI(TAG, "Free internal: %u minimal internal: %u audio_process=%d", free_sram, min_free_sram, audio_processor_.IsRunning());
 
         // If we have synchronized server time, set the status to clock "HH:MM" if the device is idle
         if (ota_.HasServerTime()) {
@@ -920,9 +920,15 @@ void Application::StartWebrtcFunction() {
             std::lock_guard<std::mutex> lock(mutex_);
             audio_decode_queue_.emplace_back(std::move(data));
         });
-        app_webrtc->OnPlayAudioData([this](std::vector<int16_t> pcm) {
-            auto codec = Board::GetInstance().GetAudioCodec();
-            codec->OutputData(pcm);
+        // app_webrtc->OnPlayAudioData([this](std::vector<int16_t> pcm) {
+        //     auto codec = Board::GetInstance().GetAudioCodec();
+        //     codec->OutputData(pcm);
+        // });
+        app_webrtc->OnWebrtcStatusChange([this](int status) {
+            //PEER_CONNECTION_COMPLETED
+            if (status == 4){
+                WebrtcStartVoice();
+            }
         });
         app_webrtc->StartConnect(opus_encoder_.get(), opus_decoder_.get(), SystemInfo::GetMacAddress().c_str());
     });
@@ -1009,10 +1015,18 @@ void Application::WebrtcEncodeVoiceData(std::vector<int16_t>&& data) {
 
 //关闭小智
 void Application::WebrtcStopXiaozhi(){
-
-    SetDeviceState(kDeviceStateIdle);
-
     auto& board = Board::GetInstance();
+    SetDeviceState(kDeviceStateIdle);
+    // 预先关闭音频输出，避免升级过程有音频操作
+    auto codec = board.GetAudioCodec();
+    AbortSpeaking(kAbortReasonNone);
+    // codec->EnableInput(false);
+    codec->EnableOutput(false);
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        audio_decode_queue_.clear();
+    }
+
     auto display = board.GetDisplay();
 
     //这里要关闭小智的网络连接
@@ -1028,19 +1042,12 @@ void Application::WebrtcStopXiaozhi(){
 #if CONFIG_USE_WAKE_WORD_DETECT
     wake_word_detect_.StopDetection();
 #endif
-    // 预先关闭音频输出，避免升级过程有音频操作
-    auto codec = board.GetAudioCodec();
-    AbortSpeaking(kAbortReasonNone);
-    // codec->EnableInput(false);
-    codec->EnableOutput(false);
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        audio_decode_queue_.clear();
-    }
+#if CONFIG_USE_AUDIO_PROCESSOR
     audio_processor_.Stop();
-    background_task_->WaitForCompletion();
-    delete background_task_;
-    background_task_ = nullptr;
+#endif
+    // background_task_->WaitForCompletion();
+    // delete background_task_;
+    // background_task_ = nullptr;
     
 }
 
@@ -1054,7 +1061,7 @@ void Application::WebrtcStartXiaozhi(){
         display->SetStatus(Lang::Strings::STANDBY);
         display->SetChatMessage("system", "");
 
-        background_task_ = new BackgroundTask(4096 * 8);
+        // background_task_ = new BackgroundTask(4096 * 8);
         // audio_processor_.Start(); //不能打开这个，不然后续无法初始化listening
 
         SetDeviceState(kDeviceStateIdle);
@@ -1067,7 +1074,35 @@ void Application::WebrtcStartXiaozhi(){
             std::lock_guard<std::mutex> lock(mutex_);
             audio_decode_queue_.clear();
         }
+#if CONFIG_USE_WAKE_WORD_DETECT
         wake_word_detect_.StartDetection();
+#endif
+        aborted_ = false;
+    });
+}
+
+void Application::WebrtcStartVoice(){
+    Schedule([this]() {
+        auto& board = Board::GetInstance();
+        auto display = board.GetDisplay();
+
+        last_output_time_ = std::chrono::steady_clock::now();
+        display->SetStatus(Lang::Strings::WEBRTC_SPEAKING);
+        display->SetChatMessage("assistant", Lang::Strings::WEBRTC_SPEAKING);
+
+        opus_encoder_->ResetState();
+#if CONFIG_USE_AUDIO_PROCESSOR
+        audio_processor_.Start();
+#endif
+
+        // 预先关闭音频输出，避免升级过程有音频操作
+        auto codec = board.GetAudioCodec();
+        codec->EnableInput(true);
+        codec->EnableOutput(true);
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            audio_decode_queue_.clear();
+        }
         aborted_ = false;
     });
 }

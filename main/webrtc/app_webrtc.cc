@@ -11,11 +11,14 @@
 
 
 void oniceconnectionstatechange(PeerConnectionState state, void *userdata) {
-    ESP_LOGI(TAG, "PeerConnectionState: %d", state);
+    ESP_LOGW(TAG, "PeerConnection State = %d", state);
     AppWebrtc* self = static_cast<AppWebrtc*>(userdata);
     self->eState = state;
     if (state != PEER_CONNECTION_COMPLETED) {
         self->gDataChannelOpened = 0;
+    }
+    if (self->on_webrtc_status_change_){
+        self->on_webrtc_status_change_(state);
     }
 }
   
@@ -61,26 +64,13 @@ AppWebrtc::AppWebrtc() {
 
 AppWebrtc::~AppWebrtc() {
     ESP_LOGW(TAG, "AppWebrtc --- destroy %p", this);
+    webrtc_is_runing = false;
 
     if (on_incoming_audio_){
         on_incoming_audio_ = nullptr;
     }
     if (g_pc) {
         g_pc = nullptr;
-    }
-    if (xSemaphore) {
-        vSemaphoreDelete(xSemaphore);   // 销毁 Mutex
-        xSemaphore = nullptr;           // 将指针设为 NULL，避免误用
-    }
-
-    if (peer_connection_task_handle_ != nullptr) {
-        vTaskDelete(peer_connection_task_handle_);     // 删除指定任务
-        peer_connection_task_handle_ = nullptr;        // 清除句柄，避免重复删除
-    }
-
-    if (peer_signaling_task_handle_ != nullptr) {
-        vTaskDelete(peer_signaling_task_handle_);     // 删除指定任务
-        peer_signaling_task_handle_ = nullptr;        // 清除句柄，避免重复删除
     }
 
     if (encoder_ptr_) {
@@ -132,23 +122,22 @@ void AppWebrtc::StartConnect(OpusEncoderWrapper* encoder, OpusDecoderWrapper* de
     service_config.pc = g_pc;
     service_config.mqtt_url = "broker.emqx.io";
     peer_signaling_set_config(&service_config);
-    peer_signaling_join_channel();
-
-    ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
-    ESP_LOGI(TAG, "open https://sepfy.github.io/webrtc?deviceId=%s", deviceid);
 
     xTaskCreatePinnedToCore([](void* arg) {
         AppWebrtc* appwebrtc = (AppWebrtc*)arg;
         appwebrtc->PeerConnectionTask();
         vTaskDelete(NULL);
-    }, "peer_connection", 4096 * 4, this, 12, &peer_connection_task_handle_, 1);
+    }, "peer_connection", 4096 * 6, this, 18, &peer_connection_task_handle_, 1);
 
     xTaskCreatePinnedToCore([](void* arg) {
         AppWebrtc* appwebrtc = (AppWebrtc*)arg;
         appwebrtc->PeerSignalingTask();
         vTaskDelete(NULL);
-    }, "peer_signaling", 4096 * 2, this, 10, &peer_signaling_task_handle_, 0);
+    }, "peer_signaling", 4096 * 4, this, 13, &peer_signaling_task_handle_, 0);
 
+    peer_signaling_join_channel();
+    ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
+    ESP_LOGI(TAG, "open https://sepfy.github.io/webrtc?deviceId=%s", deviceid);
 }
 
 void AppWebrtc::PeerConnectionTask() {
@@ -161,7 +150,7 @@ void AppWebrtc::PeerConnectionTask() {
             xSemaphoreGive(xSemaphore);
         }
         vTaskDelay(pdMS_TO_TICKS(10));
-        WebrtcEncodeVoiceAndSend();
+        // WebrtcEncodeVoiceAndSend();
     }
 }
 
@@ -188,11 +177,28 @@ void AppWebrtc::StartAudio() {
 }
 
 void AppWebrtc::StopAudio() {
-    if (!webrtc_is_runing) {
-        return;
-    }
     webrtc_is_runing = false;
     ESP_LOGI(TAG, "StopAudio %p", this);
+
+    peer_signaling_leave_channel();
+    if (g_pc) {
+        peer_connection_close(g_pc);
+    }
+
+    if (peer_connection_task_handle_ != nullptr) {
+        vTaskDelete(peer_connection_task_handle_);     // 删除指定任务
+        peer_connection_task_handle_ = nullptr;        // 清除句柄，避免重复删除
+    }
+
+    if (peer_signaling_task_handle_ != nullptr) {
+        vTaskDelete(peer_signaling_task_handle_);     // 删除指定任务
+        peer_signaling_task_handle_ = nullptr;        // 清除句柄，避免重复删除
+    }
+
+    if (xSemaphore) {
+        vSemaphoreDelete(xSemaphore);   // 销毁 Mutex
+        xSemaphore = nullptr;           // 将指针设为 NULL，避免误用
+    }
    
     std::lock_guard<std::mutex> lock(audio_encode_mutex_);
     audio_encode_queue_.clear();
@@ -200,9 +206,7 @@ void AppWebrtc::StopAudio() {
     on_incoming_audio_ = nullptr;
     eState = PEER_CONNECTION_CLOSED;
 
-    peer_signaling_leave_channel();
     if (g_pc) {
-        peer_connection_close(g_pc);
         peer_connection_destroy(g_pc);
         g_pc = nullptr;
     }
@@ -234,9 +238,16 @@ void AppWebrtc::OnPlayAudioData(std::function<void(std::vector<int16_t> pcm)> ca
     on_play_audio_ = callback;
 }
 
+// 监听状态
+void AppWebrtc::OnWebrtcStatusChange(std::function<void(int status)> callback) {
+    ESP_LOGI(TAG, "set OnWebrtcStatusChange = %p", this);
+    on_webrtc_status_change_ = callback;
+}
+
 void AppWebrtc::WebrtcReadAudioData(std::vector<int16_t>&& audio_data) {
     std::lock_guard<std::mutex> lock(audio_encode_mutex_);
     audio_encode_queue_.emplace_back(std::move(audio_data));
+    ESP_LOGI(TAG, "WebrtcReadAudioData = %d", audio_encode_queue_.size());
 }
 
 bool AppWebrtc::WebrtcEncodeVoiceAndSend(){
