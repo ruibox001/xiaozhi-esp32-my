@@ -1106,3 +1106,7 @@ void Application::WebrtcStartVoice(){
         aborted_ = false;
     });
 }
+
+void Application::IotControlWebrtcStatus(bool status){
+    ESP_LOGW(TAG, "IotControlWebrtcStatus = %d", status);
+}

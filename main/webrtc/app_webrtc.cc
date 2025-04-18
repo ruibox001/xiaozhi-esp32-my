@@ -123,17 +123,38 @@ void AppWebrtc::StartConnect(OpusEncoderWrapper* encoder, OpusDecoderWrapper* de
     service_config.mqtt_url = "broker.emqx.io";
     peer_signaling_set_config(&service_config);
 
-    xTaskCreatePinnedToCore([](void* arg) {
-        AppWebrtc* appwebrtc = (AppWebrtc*)arg;
-        appwebrtc->PeerConnectionTask();
-        vTaskDelete(NULL);
-    }, "peer_connection", 4096 * 6, this, 18, &peer_connection_task_handle_, 1);
+    // xTaskCreatePinnedToCore([](void* arg) {
+    //     AppWebrtc* appwebrtc = (AppWebrtc*)arg;
+    //     appwebrtc->PeerConnectionTask();
+    //     vTaskDelete(NULL);
+    // }, "peer_connection", 4096 * 6, this, 15, &peer_connection_task_handle_, 1);
 
-    xTaskCreatePinnedToCore([](void* arg) {
-        AppWebrtc* appwebrtc = (AppWebrtc*)arg;
-        appwebrtc->PeerSignalingTask();
-        vTaskDelete(NULL);
-    }, "peer_signaling", 4096 * 4, this, 13, &peer_signaling_task_handle_, 0);
+    // if (peer_connection_task_stack_ == nullptr) {
+    //     peer_connection_task_stack_ = (StackType_t*)heap_caps_malloc(4096 * 6, MALLOC_CAP_SPIRAM);
+    // }
+    // peer_connection_task_handle_ = xTaskCreateStatic([](void* arg) {
+    //     auto this_ = (AppWebrtc*)arg;
+    //     this_->PeerConnectionTask();
+    //     vTaskDelete(NULL);
+    // }, "peer_connection", 4096 * 6, this, 15, peer_connection_task_stack_, &peer_connection_task_buffer_);
+
+
+
+    // xTaskCreatePinnedToCore([](void* arg) {
+    //     AppWebrtc* appwebrtc = (AppWebrtc*)arg;
+    //     appwebrtc->PeerSignalingTask();
+    //     vTaskDelete(NULL);
+    // }, "peer_signaling", 4096 * 2, this, 6, &peer_signaling_task_handle_, 0);
+
+    // if (peer_signaling_task_stack_ == nullptr) {
+    //     peer_signaling_task_stack_ = (StackType_t*)heap_caps_malloc(4096 * 8, MALLOC_CAP_SPIRAM);
+    // }
+    // peer_signaling_task_handle_ = xTaskCreateStatic([](void* arg) {
+    //     auto this_ = (AppWebrtc*)arg;
+    //     this_->PeerSignalingTask();
+    //     vTaskDelete(NULL);
+    // }, "peer_signaling", 4096 * 8, this, 6, peer_signaling_task_stack_, &peer_signaling_task_buffer_);
+
 
     peer_signaling_join_channel();
     ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());

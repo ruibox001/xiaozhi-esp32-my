@@ -136,7 +136,8 @@ private:
             if (app.GetDeviceState() == kDeviceStateStarting && !WifiStation::GetInstance().IsConnected()) {
                 ResetWifiConfiguration();
             }
-            app.ToggleChatState();
+            // app.ToggleChatState();
+            app.ButtonPressedDown();
         });
     }
 
@@ -229,7 +230,7 @@ private:
     void InitializeIot() {
         auto& thing_manager = iot::ThingManager::GetInstance();
         thing_manager.AddThing(iot::CreateThing("Speaker"));
-
+        thing_manager.AddThing(iot::CreateThing("AcControl"));
     }
 
 public:

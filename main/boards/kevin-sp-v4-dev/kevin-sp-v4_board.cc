@@ -112,6 +112,7 @@ private:
         thing_manager.AddThing(iot::CreateThing("Speaker"));
         thing_manager.AddThing(iot::CreateThing("Screen"));
         thing_manager.AddThing(iot::CreateThing("Lamp"));
+        thing_manager.AddThing(iot::CreateThing("AcControl"));
     }
 
 public:

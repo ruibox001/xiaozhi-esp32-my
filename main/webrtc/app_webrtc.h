@@ -61,6 +61,12 @@ private:
     PeerConnection* g_pc = nullptr;
     SemaphoreHandle_t xSemaphore = nullptr;
 
+    StackType_t* peer_connection_task_stack_ = nullptr;
+    StaticTask_t peer_connection_task_buffer_;
+
+    StackType_t* peer_signaling_task_stack_ = nullptr;
+    StaticTask_t peer_signaling_task_buffer_;
+
 };
 
 #endif // _APPWEBRTC_H_

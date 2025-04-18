@@ -74,6 +74,8 @@ public:
     bool CanEnterSleepMode();
     void ButtonPressedDown();
 
+    void IotControlWebrtcStatus(bool status);
+
 private:
     Application();
     ~Application();
