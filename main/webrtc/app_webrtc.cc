@@ -32,7 +32,7 @@ void on_audio_track_callback(uint8_t *data, size_t size, void *userdata) {
     // For demonstration, we'll just print the size of the data received
     // ESP_LOGI(TAG, "Received audio data of size: %zu\n", size);
     AppWebrtc* self = static_cast<AppWebrtc*>(userdata);
-    if (self && data) {
+    if (self && size > 0) {
         // 4. 调用真正的成员函数
         self->on_incoming_audio_(std::vector<uint8_t>((uint8_t*)data, (uint8_t*)data + size));
     }
