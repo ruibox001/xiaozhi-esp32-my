@@ -130,14 +130,14 @@ private:
     void SetListeningMode(ListeningMode mode);
     void AudioLoop();
 
-    void StartWebrtcFunction();
-    void StopWebrtcFunction();
-    void WebrtcStartXiaozhi();
-    void WebrtcStopXiaozhi();
-    bool WebrtcDecodeVoiceAndPlay(AudioCodec* codec);
-    void Play(std::vector<int16_t> pcm_data);
-    void WebrtcEncodeVoiceData(std::vector<int16_t>&& data);
-    void WebrtcStartVoice();
+    // void StartWebrtcFunction();
+    // void StopWebrtcFunction();
+    // void WebrtcStartXiaozhi();
+    // void WebrtcStopXiaozhi();
+    // bool WebrtcDecodeVoiceAndPlay(AudioCodec* codec);
+    // void Play(std::vector<int16_t> pcm_data);
+    // void WebrtcEncodeVoiceData(std::vector<int16_t>&& data);
+    // void WebrtcStartVoice();
 
 };
 

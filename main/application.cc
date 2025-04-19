@@ -11,9 +11,6 @@
 #include "iot/thing_manager.h"
 #include "assets/lang_config.h"
 
-#include "webrtc/webrtc_manager.h"
-#include "webrtc/app_webrtc.h"
-
 #include <cstring>
 #include <esp_log.h>
 #include <cJSON.h>
@@ -40,20 +37,20 @@ static const char* const STATE_STRINGS[] = {
 };
 
 Application::Application() {
-    event_group_ = xEventGroupCreate();
-    background_task_ = new BackgroundTask(4096 * 8);
+    // event_group_ = xEventGroupCreate();
+    // background_task_ = new BackgroundTask(4096 * 8);
 
-    esp_timer_create_args_t clock_timer_args = {
-        .callback = [](void* arg) {
-            Application* app = (Application*)arg;
-            app->OnClockTimer();
-        },
-        .arg = this,
-        .dispatch_method = ESP_TIMER_TASK,
-        .name = "clock_timer",
-        .skip_unhandled_events = true
-    };
-    esp_timer_create(&clock_timer_args, &clock_timer_handle_);
+    // esp_timer_create_args_t clock_timer_args = {
+    //     .callback = [](void* arg) {
+    //         Application* app = (Application*)arg;
+    //         app->OnClockTimer();
+    //     },
+    //     .arg = this,
+    //     .dispatch_method = ESP_TIMER_TASK,
+    //     .name = "clock_timer",
+    //     .skip_unhandled_events = true
+    // };
+    // esp_timer_create(&clock_timer_args, &clock_timer_handle_);
 }
 
 Application::~Application() {
@@ -474,15 +471,15 @@ void Application::Start() {
     audio_processor_.Initialize(codec, realtime_chat_enabled_);
     audio_processor_.OnOutput([this](std::vector<int16_t>&& data) {
 
-        this->WebrtcEncodeVoiceData(std::move(data));  // 调用成员函数
-        // background_task_->Schedule([this, data = std::move(data)]() mutable {
-        //     opus_encoder_->Encode(std::move(data), [this](std::vector<uint8_t>&& opus) {
-        //         protocol_->SendAudio(std::move(opus));
-        //         // Schedule([this, opus = std::move(opus)]() {
-        //             // protocol_->SendAudio(opus);
-        //         // });
-        //     });
-        // });
+        // this->WebrtcEncodeVoiceData(std::move(data));  // 调用成员函数
+        background_task_->Schedule([this, data = std::move(data)]() mutable {
+            opus_encoder_->Encode(std::move(data), [this](std::vector<uint8_t>&& opus) {
+                protocol_->SendAudio(std::move(opus));
+                // Schedule([this, opus = std::move(opus)]() {
+                    // protocol_->SendAudio(opus);
+                // });
+            });
+        });
     });
     audio_processor_.OnVadStateChange([this](bool speaking) {
         if (device_state_ == kDeviceStateListening) {
@@ -608,9 +605,9 @@ void Application::OnAudioOutput(AudioCodec* codec) {
 
 #if CONFIG_USE_WEBRTC_CHAT
     // webrtc直接解码播放
-    if (WebrtcDecodeVoiceAndPlay(codec)) {
-        return;
-    }
+    // if (WebrtcDecodeVoiceAndPlay(codec)) {
+    //     return;
+    // }
 #endif
 
 
@@ -895,217 +892,217 @@ bool Application::CanEnterSleepMode() {
 
 //webrtc相关 ----------------------------------------------------->
 void Application::ButtonPressedDown() {
-    ESP_LOGI(TAG, "ButtonPressedDown");
-    if (!WebrtcManager::Instance().WebrtcIsRuning()) {
-        StartWebrtcFunction();
-    }
-    else
-    {
-        StopWebrtcFunction();
-    }
+//     ESP_LOGI(TAG, "ButtonPressedDown");
+//     if (!WebrtcManager::Instance().WebrtcIsRuning()) {
+//         StartWebrtcFunction();
+//     }
+//     else
+//     {
+//         StopWebrtcFunction();
+//     }
 }
 
-void Application::StartWebrtcFunction() {
-#if CONFIG_USE_WEBRTC_CHAT
-    ESP_LOGI(TAG, "StartWebrtc ---------------------- > 00");
-    //关闭小智
-    WebrtcStopXiaozhi();
+// void Application::StartWebrtcFunction() {
+// #if CONFIG_USE_WEBRTC_CHAT
+//     ESP_LOGI(TAG, "StartWebrtc ---------------------- > 00");
+//     //关闭小智
+//     WebrtcStopXiaozhi();
 
-    Schedule([this]() {
-        //初始化webrtc
-        auto& app_webrtc = WebrtcManager::Instance().WebrtcGet();
-        WebrtcManager::Instance().WebrtcSetState(true);
-        //设置webrtc的回调函数，处理接受都得的音频数据
-        app_webrtc->OnIncomingAudioData([this](std::vector<uint8_t>&& data) {
-            std::lock_guard<std::mutex> lock(mutex_);
-            audio_decode_queue_.emplace_back(std::move(data));
-        });
-        // app_webrtc->OnPlayAudioData([this](std::vector<int16_t> pcm) {
-        //     auto codec = Board::GetInstance().GetAudioCodec();
-        //     codec->OutputData(pcm);
-        // });
-        app_webrtc->OnWebrtcStatusChange([this](int status) {
-            //PEER_CONNECTION_COMPLETED
-            if (status == 4){
-                WebrtcStartVoice();
-            }
-        });
-        app_webrtc->StartConnect(opus_encoder_.get(), opus_decoder_.get(), SystemInfo::GetMacAddress().c_str());
-    });
+//     Schedule([this]() {
+//         //初始化webrtc
+//         auto& app_webrtc = WebrtcManager::Instance().WebrtcGet();
+//         WebrtcManager::Instance().WebrtcSetState(true);
+//         //设置webrtc的回调函数，处理接受都得的音频数据
+//         app_webrtc->OnIncomingAudioData([this](std::vector<uint8_t>&& data) {
+//             std::lock_guard<std::mutex> lock(mutex_);
+//             audio_decode_queue_.emplace_back(std::move(data));
+//         });
+//         // app_webrtc->OnPlayAudioData([this](std::vector<int16_t> pcm) {
+//         //     auto codec = Board::GetInstance().GetAudioCodec();
+//         //     codec->OutputData(pcm);
+//         // });
+//         app_webrtc->OnWebrtcStatusChange([this](int status) {
+//             //PEER_CONNECTION_COMPLETED
+//             if (status == 4){
+//                 WebrtcStartVoice();
+//             }
+//         });
+//         app_webrtc->StartConnect(opus_encoder_.get(), opus_decoder_.get(), SystemInfo::GetMacAddress().c_str());
+//     });
 
-#endif
-}
+// #endif
+// }
 
-void Application::StopWebrtcFunction() {
-#if CONFIG_USE_WEBRTC_CHAT
-    ESP_LOGI(TAG, "StopWebrtc ---------------------- > 11");
-    Schedule([this]() {
-        auto& app_webrtc = WebrtcManager::Instance().WebrtcGet();
-        app_webrtc->StopAudio();
-        //销毁webrtc
-        WebrtcManager::Instance().WebrtcSetState(false);
-    });
+// void Application::StopWebrtcFunction() {
+// #if CONFIG_USE_WEBRTC_CHAT
+//     ESP_LOGI(TAG, "StopWebrtc ---------------------- > 11");
+//     Schedule([this]() {
+//         auto& app_webrtc = WebrtcManager::Instance().WebrtcGet();
+//         app_webrtc->StopAudio();
+//         //销毁webrtc
+//         WebrtcManager::Instance().WebrtcSetState(false);
+//     });
     
-    //开启小智
-    WebrtcStartXiaozhi();
-#endif
-}
+//     //开启小智
+//     WebrtcStartXiaozhi();
+// #endif
+// }
 
-bool Application::WebrtcDecodeVoiceAndPlay(AudioCodec* codec){
+// bool Application::WebrtcDecodeVoiceAndPlay(AudioCodec* codec){
 
-    if (!WebrtcManager::Instance().WebrtcIsRuning()) {
-        return false;
-    }
+//     if (!WebrtcManager::Instance().WebrtcIsRuning()) {
+//         return false;
+//     }
     
-    auto& app_webrtc = WebrtcManager::Instance().WebrtcGet();
-    ESP_LOGW(TAG, "webrtc is create = 00");
-    if (!app_webrtc->webrtc_is_runing) {
-        return false;
-    }
+//     auto& app_webrtc = WebrtcManager::Instance().WebrtcGet();
+//     ESP_LOGW(TAG, "webrtc is create = 00");
+//     if (!app_webrtc->webrtc_is_runing) {
+//         return false;
+//     }
 
-    ESP_LOGW(TAG, "webrtc is running = 11");
-    std::unique_lock<std::mutex> lock(mutex_);
-    if (audio_decode_queue_.empty()) {
-        lock.unlock();
-        return true;
-    }
+//     ESP_LOGW(TAG, "webrtc is running = 11");
+//     std::unique_lock<std::mutex> lock(mutex_);
+//     if (audio_decode_queue_.empty()) {
+//         lock.unlock();
+//         return true;
+//     }
 
-    auto opus = std::move(audio_decode_queue_.front());
-    audio_decode_queue_.pop_front();
-    lock.unlock();
+//     auto opus = std::move(audio_decode_queue_.front());
+//     audio_decode_queue_.pop_front();
+//     lock.unlock();
 
-    std::vector<int16_t> pcm;
-    if (!opus_decoder_->Decode(std::move(opus), pcm)) {
-        return true;
-    }
-    codec->OutputData(pcm);
-    return true;
-}
+//     std::vector<int16_t> pcm;
+//     if (!opus_decoder_->Decode(std::move(opus), pcm)) {
+//         return true;
+//     }
+//     codec->OutputData(pcm);
+//     return true;
+// }
 
-void Application::Play(std::vector<int16_t> pcm_data) {
-    auto codec = Board::GetInstance().GetAudioCodec();
-    codec->OutputData(pcm_data);
-}
+// void Application::Play(std::vector<int16_t> pcm_data) {
+//     auto codec = Board::GetInstance().GetAudioCodec();
+//     codec->OutputData(pcm_data);
+// }
 
-// 采集音频数据-编码
-void Application::WebrtcEncodeVoiceData(std::vector<int16_t>&& data) {
+// // 采集音频数据-编码
+// void Application::WebrtcEncodeVoiceData(std::vector<int16_t>&& data) {
 
-    if (WebrtcManager::Instance().WebrtcIsRuning()) {
-        auto& app_webrtc = WebrtcManager::Instance().WebrtcGet();
-        if (app_webrtc->webrtc_is_runing) {
+//     if (WebrtcManager::Instance().WebrtcIsRuning()) {
+//         auto& app_webrtc = WebrtcManager::Instance().WebrtcGet();
+//         if (app_webrtc->webrtc_is_runing) {
 
-            app_webrtc->WebrtcReadAudioData(std::move(data));
-            return;
-        }
-    }
+//             app_webrtc->WebrtcReadAudioData(std::move(data));
+//             return;
+//         }
+//     }
 
-    // 放在main loop执行的话，需要保证申请内存要=4096*8，否则会溢出
-    // Schedule([this, datas = std::move(data)]() mutable {
-    //     opus_encoder_->Encode(std::move(datas), [this](std::vector<uint8_t>&& opus) {
-    //         protocol_->SendAudio(std::move(opus));
-    //     });
-    // });
+//     // 放在main loop执行的话，需要保证申请内存要=4096*8，否则会溢出
+//     // Schedule([this, datas = std::move(data)]() mutable {
+//     //     opus_encoder_->Encode(std::move(datas), [this](std::vector<uint8_t>&& opus) {
+//     //         protocol_->SendAudio(std::move(opus));
+//     //     });
+//     // });
     
-    background_task_->Schedule([this, data = std::move(data)]() mutable {
-        opus_encoder_->Encode(std::move(data), [this](std::vector<uint8_t>&& opus) {
-            protocol_->SendAudio(std::move(opus));
-        });
-    });
-}
+//     background_task_->Schedule([this, data = std::move(data)]() mutable {
+//         opus_encoder_->Encode(std::move(data), [this](std::vector<uint8_t>&& opus) {
+//             protocol_->SendAudio(std::move(opus));
+//         });
+//     });
+// }
 
-//关闭小智
-void Application::WebrtcStopXiaozhi(){
-    auto& board = Board::GetInstance();
-    SetDeviceState(kDeviceStateIdle);
-    // 预先关闭音频输出，避免升级过程有音频操作
-    auto codec = board.GetAudioCodec();
-    AbortSpeaking(kAbortReasonNone);
-    // codec->EnableInput(false);
-    codec->EnableOutput(false);
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        audio_decode_queue_.clear();
-    }
+// //关闭小智
+// void Application::WebrtcStopXiaozhi(){
+//     auto& board = Board::GetInstance();
+//     SetDeviceState(kDeviceStateIdle);
+//     // 预先关闭音频输出，避免升级过程有音频操作
+//     auto codec = board.GetAudioCodec();
+//     AbortSpeaking(kAbortReasonNone);
+//     // codec->EnableInput(false);
+//     codec->EnableOutput(false);
+//     {
+//         std::lock_guard<std::mutex> lock(mutex_);
+//         audio_decode_queue_.clear();
+//     }
 
-    auto display = board.GetDisplay();
+//     auto display = board.GetDisplay();
 
-    //这里要关闭小智的网络连接
-    do {
-        vTaskDelay(pdMS_TO_TICKS(300));
-        ESP_LOGW(TAG, "Waiting for audio paly finish");
-    } while (GetDeviceState() == kDeviceStateSpeaking);
-    protocol_->CloseAudioChannel();  // 未播放完音频可能会崩溃，所以前面等待一下
+//     //这里要关闭小智的网络连接
+//     do {
+//         vTaskDelay(pdMS_TO_TICKS(300));
+//         ESP_LOGW(TAG, "Waiting for audio paly finish");
+//     } while (GetDeviceState() == kDeviceStateSpeaking);
+//     protocol_->CloseAudioChannel();  // 未播放完音频可能会崩溃，所以前面等待一下
 
-    display->SetStatus(Lang::Strings::WEBRTC_CONNECTING);
-    display->SetChatMessage("system", "");
+//     display->SetStatus(Lang::Strings::WEBRTC_CONNECTING);
+//     display->SetChatMessage("system", "");
 
-#if CONFIG_USE_WAKE_WORD_DETECT
-    wake_word_detect_.StopDetection();
-#endif
-#if CONFIG_USE_AUDIO_PROCESSOR
-    audio_processor_.Stop();
-#endif
-    // background_task_->WaitForCompletion();
-    // delete background_task_;
-    // background_task_ = nullptr;
+// #if CONFIG_USE_WAKE_WORD_DETECT
+//     wake_word_detect_.StopDetection();
+// #endif
+// #if CONFIG_USE_AUDIO_PROCESSOR
+//     audio_processor_.Stop();
+// #endif
+//     // background_task_->WaitForCompletion();
+//     // delete background_task_;
+//     // background_task_ = nullptr;
     
-}
+// }
 
-//启动小智
-void Application::WebrtcStartXiaozhi(){
-    Schedule([this]() {
-        auto& board = Board::GetInstance();
-        auto display = board.GetDisplay();
+// //启动小智
+// void Application::WebrtcStartXiaozhi(){
+//     Schedule([this]() {
+//         auto& board = Board::GetInstance();
+//         auto display = board.GetDisplay();
 
-        last_output_time_ = std::chrono::steady_clock::now();
-        display->SetStatus(Lang::Strings::STANDBY);
-        display->SetChatMessage("system", "");
+//         last_output_time_ = std::chrono::steady_clock::now();
+//         display->SetStatus(Lang::Strings::STANDBY);
+//         display->SetChatMessage("system", "");
 
-        // background_task_ = new BackgroundTask(4096 * 8);
-        // audio_processor_.Start(); //不能打开这个，不然后续无法初始化listening
+//         // background_task_ = new BackgroundTask(4096 * 8);
+//         // audio_processor_.Start(); //不能打开这个，不然后续无法初始化listening
 
-        SetDeviceState(kDeviceStateIdle);
+//         SetDeviceState(kDeviceStateIdle);
 
-        // 预先关闭音频输出，避免升级过程有音频操作
-        auto codec = board.GetAudioCodec();
-        codec->EnableInput(true);
-        codec->EnableOutput(true);
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            audio_decode_queue_.clear();
-        }
-#if CONFIG_USE_WAKE_WORD_DETECT
-        wake_word_detect_.StartDetection();
-#endif
-        aborted_ = false;
-    });
-}
+//         // 预先关闭音频输出，避免升级过程有音频操作
+//         auto codec = board.GetAudioCodec();
+//         codec->EnableInput(true);
+//         codec->EnableOutput(true);
+//         {
+//             std::lock_guard<std::mutex> lock(mutex_);
+//             audio_decode_queue_.clear();
+//         }
+// #if CONFIG_USE_WAKE_WORD_DETECT
+//         wake_word_detect_.StartDetection();
+// #endif
+//         aborted_ = false;
+//     });
+// }
 
-void Application::WebrtcStartVoice(){
-    Schedule([this]() {
-        auto& board = Board::GetInstance();
-        auto display = board.GetDisplay();
+// void Application::WebrtcStartVoice(){
+//     Schedule([this]() {
+//         auto& board = Board::GetInstance();
+//         auto display = board.GetDisplay();
 
-        last_output_time_ = std::chrono::steady_clock::now();
-        display->SetStatus(Lang::Strings::WEBRTC_SPEAKING);
-        display->SetChatMessage("assistant", Lang::Strings::WEBRTC_SPEAKING);
+//         last_output_time_ = std::chrono::steady_clock::now();
+//         display->SetStatus(Lang::Strings::WEBRTC_SPEAKING);
+//         display->SetChatMessage("assistant", Lang::Strings::WEBRTC_SPEAKING);
 
-        opus_encoder_->ResetState();
-#if CONFIG_USE_AUDIO_PROCESSOR
-        audio_processor_.Start();
-#endif
+//         opus_encoder_->ResetState();
+// #if CONFIG_USE_AUDIO_PROCESSOR
+//         audio_processor_.Start();
+// #endif
 
-        // 预先关闭音频输出，避免升级过程有音频操作
-        auto codec = board.GetAudioCodec();
-        codec->EnableInput(true);
-        codec->EnableOutput(true);
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            audio_decode_queue_.clear();
-        }
-        aborted_ = false;
-    });
-}
+//         // 预先关闭音频输出，避免升级过程有音频操作
+//         auto codec = board.GetAudioCodec();
+//         codec->EnableInput(true);
+//         codec->EnableOutput(true);
+//         {
+//             std::lock_guard<std::mutex> lock(mutex_);
+//             audio_decode_queue_.clear();
+//         }
+//         aborted_ = false;
+//     });
+// }
 
 void Application::IotControlWebrtcStatus(bool status){
     ESP_LOGW(TAG, "IotControlWebrtcStatus = %d", status);

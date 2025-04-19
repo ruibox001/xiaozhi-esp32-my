@@ -97,6 +97,7 @@ void WifiBoard::StartNetwork() {
         std::string notification = Lang::Strings::CONNECTED_TO;
         notification += ssid;
         display->ShowNotification(notification.c_str(), 30000);
+        ESP_LOGI(TAG, "wifi connected");
     });
     wifi_station.Start();
 

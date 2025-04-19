@@ -2,7 +2,6 @@
 #include "audio_codecs/es8311_audio_codec.h"
 #include "display/lcd_display.h"
 #include "system_reset.h"
-#include "application.h"
 #include "button.h"
 #include "config.h"
 #include "iot/thing_manager.h"
@@ -12,6 +11,9 @@
 #include <esp_lcd_panel_vendor.h>
 #include <driver/i2c_master.h>
 #include <wifi_station.h>
+
+// #include "application.h"
+#include "webrtc_application.h"
 
 #define TAG "kevin-sp-v4"
 
@@ -58,7 +60,7 @@ private:
             // if (app.GetDeviceState() == kDeviceStateStarting && !WifiStation::GetInstance().IsConnected()) {
             //     ResetWifiConfiguration();
             // }
-            Application::GetInstance().ButtonPressedDown();
+            WebrtcApplication::GetInstance().ButtonPressedDown();
         });
         boot_button_.OnPressDown([this]() {
 

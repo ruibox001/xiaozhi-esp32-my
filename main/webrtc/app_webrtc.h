@@ -31,7 +31,7 @@ public:
     
     // webrtc运行状态
     bool webrtc_is_runing = false;
-    void WebrtcReadAudioData(std::vector<int16_t>&& audio_data);
+    void WebrtcReadAudioData(const std::vector<uint8_t>& audio_data);
 
     PeerConnectionState eState = PEER_CONNECTION_CLOSED;
     int gDataChannelOpened = 0;
@@ -45,7 +45,7 @@ public:
 private:
 
     std::mutex audio_encode_mutex_;
-    std::list<std::vector<int16_t>> audio_encode_queue_;
+    std::list<std::vector<uint8_t>> audio_encode_queue_;
 
     OpusEncoderWrapper* encoder_ptr_ = nullptr;  // 存储裸指针，不拥有所有权
     OpusDecoderWrapper* decoder_ptr_ = nullptr;

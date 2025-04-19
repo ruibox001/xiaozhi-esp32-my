@@ -5,8 +5,8 @@
 #include <driver/gpio.h>
 #include <esp_event.h>
 
-#include "application.h"
-#include "system_info.h"
+// #include "application.h"
+#include "webrtc_application.h"
 
 #define TAG "main"
 
@@ -25,6 +25,8 @@ extern "C" void app_main(void)
     ESP_ERROR_CHECK(ret);
 
     // Launch the application
-    Application::GetInstance().Start();
+    // Application::GetInstance().Start();
     // The main thread will exit and release the stack memory
+
+    WebrtcApplication::GetInstance().StartWebrtc();
 }
