@@ -43,9 +43,6 @@ void WebrtcApplication::StartWebrtc() {
         std::lock_guard<std::mutex> lock(mutex_);
         audio_decode_queue_.emplace_back(std::move(data));
     });
-    app_webrtc_->OnPlayAudioData([this, codec](std::vector<int16_t> pcm) {
-        codec->OutputData(pcm);
-    });
     app_webrtc_->OnWebrtcStatusChange([this, codec](int status) {
         //PEER_CONNECTION_COMPLETED
         if (status == 4){
@@ -84,7 +81,18 @@ void WebrtcApplication::StartWebrtc() {
     audio_processor_.Initialize(codec, true);
     audio_processor_.OnOutput([this](std::vector<int16_t>&& data) {
 
+        if (data.empty()) {
+            ESP_LOGE(TAG, "Empty audio data 0");
+            return;
+        }
+
         background_task_->Schedule([this, data = std::move(data)]() mutable {
+
+            if (data.empty()) {
+                ESP_LOGE(TAG, "Empty audio data 1");
+                return;
+            }
+            
             opus_encoder_->Encode(std::move(data), [this](std::vector<uint8_t>&& opus) {
                 // protocol_->SendAudio(std::move(opus));
                 // app_webrtc_->SendAudioData(std::move(opus));
@@ -96,7 +104,7 @@ void WebrtcApplication::StartWebrtc() {
     while (true)
     {
         // ESP_LOGI(TAG, "MainLoop");
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(6));
         OnAudioInput(codec);
     }
 }
@@ -127,6 +135,7 @@ void WebrtcApplication::OnAudioOutput() {
         return;
     }
 
+    // ESP_LOGW(TAG, "OnAudioOutput - %d", audio_decode_queue_.size());
     auto opus = std::move(audio_decode_queue_.front());
     audio_decode_queue_.pop_front();
     lock.unlock();
