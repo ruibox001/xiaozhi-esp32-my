@@ -12,24 +12,19 @@
 #include "system_info.h"
 #include "audio_codec.h"
 // #include "assets/lang_config.h"
-// #include "peer.h"
 
 #define TAG "WebrtcApplication"
 
 //下面是类成员函数
 
 WebrtcApplication::WebrtcApplication() {
-    // event_group_ = xEventGroupCreate();
     background_task_ = new BackgroundTask(4096 * 8);
-    // xSemaphore = xSemaphoreCreateMutex();
 }
 
 WebrtcApplication::~WebrtcApplication() {
     if (background_task_ != nullptr) {
         delete background_task_;
     }
-    // vEventGroupDelete(event_group_);
-    // stop_webrtc(this);
 }
 
 void WebrtcApplication::StartWebrtc() {
@@ -53,7 +48,7 @@ void WebrtcApplication::StartWebrtc() {
         }
     });
 
-//     /* Setup the audio codec */
+    /* Setup the audio codec */
     opus_decoder_ = std::make_unique<OpusDecoderWrapper>(codec->output_sample_rate(), 1, OPUS_FRAME_DURATION_MS);
     opus_encoder_ = std::make_unique<OpusEncoderWrapper>(16000, 1, OPUS_FRAME_DURATION_MS);
     
@@ -150,13 +145,6 @@ void WebrtcApplication::OnAudioOutput() {
         codec->OutputData(pcm);
     });
 }
-
-// // 把接受的音频数据解码成PCM数据，放到队列中播放
-// void WebrtcApplication::WebrtcIncomingAudio(uint8_t *data, size_t size) {
-//     std::lock_guard<std::mutex> lock(mutex_);
-//     std::vector<uint8_t>&& audio_data = std::vector<uint8_t>((uint8_t*)data, (uint8_t*)data + size);
-//     audio_decode_queue_.emplace_back(std::move(audio_data));
-// }
 
 //webrtc相关 ----------------------------------------------------->
 void WebrtcApplication::ButtonPressedDown() {

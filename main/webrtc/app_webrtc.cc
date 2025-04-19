@@ -75,10 +75,6 @@ AppWebrtc::~AppWebrtc() {
         decoder_ptr_ = nullptr;
     }
 
-    if (on_play_audio_) {
-        on_play_audio_ = nullptr;
-    }
-
     if (on_incoming_audio_){
         on_incoming_audio_ = nullptr;
     }
@@ -126,24 +122,6 @@ void AppWebrtc::StartConnect(OpusEncoderWrapper* encoder, OpusDecoderWrapper* de
     service_config.mqtt_url = "broker.emqx.io";
     peer_signaling_set_config(&service_config);
     peer_signaling_join_channel();
-
-    // if (peer_connection_task_stack_ == nullptr) {
-    //     peer_connection_task_stack_ = (StackType_t*)heap_caps_malloc(4096 * 6, MALLOC_CAP_SPIRAM);
-    // }
-    // peer_connection_task_handle_ = xTaskCreateStatic([](void* arg) {
-    //     auto this_ = (AppWebrtc*)arg;
-    //     this_->PeerConnectionTask();
-    //     vTaskDelete(NULL);
-    // }, "peer_connection", 4096 * 6, this, 15, peer_connection_task_stack_, &peer_connection_task_buffer_);
-
-    // if (peer_signaling_task_stack_ == nullptr) {
-    //     peer_signaling_task_stack_ = (StackType_t*)heap_caps_malloc(4096 * 8, MALLOC_CAP_SPIRAM);
-    // }
-    // peer_signaling_task_handle_ = xTaskCreateStatic([](void* arg) {
-    //     auto this_ = (AppWebrtc*)arg;
-    //     this_->PeerSignalingTask();
-    //     vTaskDelete(NULL);
-    // }, "peer_signaling", 4096 * 8, this, 6, peer_signaling_task_stack_, &peer_signaling_task_buffer_);
 
 
     ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
@@ -255,12 +233,6 @@ void AppWebrtc::OnIncomingAudioData(std::function<void(std::vector<uint8_t>&& da
     on_incoming_audio_ = callback;
 }
 
-// 播放pcm文件
-void AppWebrtc::OnPlayAudioData(std::function<void(std::vector<int16_t> pcm)> callback) {
-    ESP_LOGI(TAG, "set OnIncomingAudioData = %p", this);
-    on_play_audio_ = callback;
-}
-
 // 监听状态
 void AppWebrtc::OnWebrtcStatusChange(std::function<void(int status)> callback) {
     ESP_LOGI(TAG, "set OnWebrtcStatusChange = %p", this);
@@ -292,23 +264,4 @@ bool AppWebrtc::WebrtcEncodeVoiceAndSend(){
     lock.unlock();
     
     return true;
-}
-
-void AppWebrtc::WebrtcDecodePVoiceAndPlay(uint8_t *data, size_t size) {
-    // auto codec = Board::GetInstance().GetAudioCodec();
-
-    // 1. 将 data 转换为 std::vector<uint8_t>
-    std::vector<uint8_t> opus_data(data, data + size);
-
-    // 2. 准备接收 PCM 数据的 vector
-    std::vector<int16_t> pcm_data;
-
-    if (decoder_ptr_ && on_play_audio_){
-        // 3. 调用解码函数
-        if (decoder_ptr_->Decode(std::move(opus_data), pcm_data)) {
-            // 解码成功，pcm_data 现在包含解码后的音频数据
-            // 可以在这里处理 PCM 数据，比如播放或传递给其他模块
-            on_play_audio_(pcm_data);
-        }
-    }
 }

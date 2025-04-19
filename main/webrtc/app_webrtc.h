@@ -37,7 +37,6 @@ public:
     int gDataChannelOpened = 0;
 
     std::function<void(std::vector<uint8_t>&& data)> on_incoming_audio_;
-    std::function<void(std::vector<int16_t> pcm)> on_play_audio_;
     std::function<void(int status)> on_webrtc_status_change_;
     
     TaskHandle_t peer_signaling_task_handle_ = nullptr;
@@ -51,7 +50,6 @@ private:
     OpusDecoderWrapper* decoder_ptr_ = nullptr;
 
     bool WebrtcEncodeVoiceAndSend();
-    void WebrtcDecodePVoiceAndPlay(uint8_t *data, size_t size);
 
     void PeerConnectionTask();
     void PeerSignalingTask();
@@ -60,12 +58,6 @@ private:
 
     PeerConnection* g_pc = nullptr;
     SemaphoreHandle_t xSemaphore = nullptr;
-
-    StackType_t* peer_connection_task_stack_ = nullptr;
-    StaticTask_t peer_connection_task_buffer_;
-
-    StackType_t* peer_signaling_task_stack_ = nullptr;
-    StaticTask_t peer_signaling_task_buffer_;
 
 };
 
