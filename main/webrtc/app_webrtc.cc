@@ -153,13 +153,13 @@ void AppWebrtc::StartConnect(OpusEncoderWrapper* encoder, OpusDecoderWrapper* de
         AppWebrtc* appwebrtc = (AppWebrtc*)arg;
         appwebrtc->PeerConnectionTask();
         vTaskDelete(NULL);
-    }, "peer_connection", 4096 * 6, this, 10, &peer_connection_task_handle_, 0);
+    }, "peer_connection", 4096 * 6, this, 18, &peer_connection_task_handle_, 1);
 
     xTaskCreatePinnedToCore([](void* arg) {
         AppWebrtc* appwebrtc = (AppWebrtc*)arg;
         appwebrtc->PeerSignalingTask();
         vTaskDelete(NULL);
-    }, "peer_signaling", 4096 * 2, this, 6, &peer_signaling_task_handle_, 1);
+    }, "peer_signaling", 4096 * 2, this, 6, &peer_signaling_task_handle_, 0);
 }
 
 void AppWebrtc::PeerConnectionTask() {
@@ -168,12 +168,12 @@ void AppWebrtc::PeerConnectionTask() {
         // ESP_LOGW(TAG, "PeerConnectionTask runing ");
         if (xSemaphoreTake(xSemaphore, portMAX_DELAY)) {
             if(!WebrtcEncodeVoiceAndSend()) {
-                vTaskDelay(pdMS_TO_TICKS(20));
+                vTaskDelay(pdMS_TO_TICKS(100));
             }
             peer_connection_loop(g_pc);
             xSemaphoreGive(xSemaphore);
         }
-        vTaskDelay(pdMS_TO_TICKS(6));
+        vTaskDelay(pdMS_TO_TICKS(4));
     }
 }
 
@@ -236,7 +236,7 @@ void AppWebrtc::StopAudio() {
 }
 
 void AppWebrtc::SendAudioData(const std::vector<uint8_t>& data) {
-    if (gDataChannelOpened == 0 || data.empty()) {
+    if (gDataChannelOpened == 0 || data.size() <= 0) {
         return;
     }
     peer_connection_send_audio(g_pc, data.data(), data.size());

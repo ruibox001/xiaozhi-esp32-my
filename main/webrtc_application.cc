@@ -82,20 +82,21 @@ void WebrtcApplication::StartWebrtc() {
     audio_processor_.OnOutput([this](std::vector<int16_t>&& data) {
 
         if (data.empty()) {
-            ESP_LOGE(TAG, "Empty audio data 0");
             return;
         }
 
         background_task_->Schedule([this, data = std::move(data)]() mutable {
 
             if (data.empty()) {
-                ESP_LOGE(TAG, "Empty audio data 1");
                 return;
             }
             
             opus_encoder_->Encode(std::move(data), [this](std::vector<uint8_t>&& opus) {
                 // protocol_->SendAudio(std::move(opus));
                 // app_webrtc_->SendAudioData(std::move(opus));
+                if (opus.empty()) {
+                    return;
+                }
                 app_webrtc_->WebrtcReadAudioData(std::move(opus));
             });
         });
@@ -104,8 +105,8 @@ void WebrtcApplication::StartWebrtc() {
     while (true)
     {
         // ESP_LOGI(TAG, "MainLoop");
-        vTaskDelay(pdMS_TO_TICKS(6));
         OnAudioInput(codec);
+        vTaskDelay(pdMS_TO_TICKS(2));
     }
 }
 
