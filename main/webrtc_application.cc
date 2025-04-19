@@ -34,6 +34,7 @@ WebrtcApplication::~WebrtcApplication() {
 
 void WebrtcApplication::StartWebrtc() {
     auto& board = Board::GetInstance();
+    auto codec = Board::GetInstance().GetAudioCodec();
 
     /* Setup the display */
     auto display = board.GetDisplay();
@@ -42,19 +43,20 @@ void WebrtcApplication::StartWebrtc() {
         std::lock_guard<std::mutex> lock(mutex_);
         audio_decode_queue_.emplace_back(std::move(data));
     });
-    app_webrtc_->OnPlayAudioData([this](std::vector<int16_t> pcm) {
-        auto codec = Board::GetInstance().GetAudioCodec();
+    app_webrtc_->OnPlayAudioData([this, codec](std::vector<int16_t> pcm) {
         codec->OutputData(pcm);
     });
-    app_webrtc_->OnWebrtcStatusChange([this](int status) {
+    app_webrtc_->OnWebrtcStatusChange([this, codec](int status) {
         //PEER_CONNECTION_COMPLETED
         if (status == 4){
             WebrtcStartVoice();
         }
+        else{
+            WebrtcStopVoice(codec);
+        }
     });
 
 //     /* Setup the audio codec */
-    auto codec = board.GetAudioCodec();
     opus_decoder_ = std::make_unique<OpusDecoderWrapper>(codec->output_sample_rate(), 1, OPUS_FRAME_DURATION_MS);
     opus_encoder_ = std::make_unique<OpusEncoderWrapper>(16000, 1, OPUS_FRAME_DURATION_MS);
     
@@ -87,9 +89,6 @@ void WebrtcApplication::StartWebrtc() {
                 // protocol_->SendAudio(std::move(opus));
                 // app_webrtc_->SendAudioData(std::move(opus));
                 app_webrtc_->WebrtcReadAudioData(std::move(opus));
-                // Schedule([this, opus = std::move(opus)]() {
-                    // protocol_->SendAudio(opus);
-                // });
             });
         });
     });
@@ -103,15 +102,19 @@ void WebrtcApplication::StartWebrtc() {
 }
 
 void WebrtcApplication::OnAudioInput(AudioCodec* codec) {
+    if (!app_webrtc_->webrtc_is_runing){
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+
     std::vector<int16_t> data;
-    if (app_webrtc_->webrtc_is_runing && audio_processor_.IsRunning()) {
+    if (audio_processor_.IsRunning()) {
         data.resize(audio_processor_.GetFeedSize());
         codec->InputData(data);
         audio_processor_.Feed(data);
-        OnAudioOutput();
-        return;
     }
-    vTaskDelay(pdMS_TO_TICKS(100));
+    if (codec->output_enabled()) {
+        OnAudioOutput();
+    }
 }
 
 // 从队列中读取音频数据，进行解码
@@ -138,39 +141,6 @@ void WebrtcApplication::OnAudioOutput() {
     });
 }
 
-// void WebrtcApplication::SetDecodeSampleRate(int sample_rate, int frame_duration) {
-//     if (opus_decoder_->sample_rate() == sample_rate && opus_decoder_->duration_ms() == frame_duration) {
-//         return;
-//     }
-
-//     opus_decoder_.reset();
-//     opus_decoder_ = std::make_unique<OpusDecoderWrapper>(sample_rate, 1, frame_duration);
-
-//     auto codec = Board::GetInstance().GetAudioCodec();
-//     if (opus_decoder_->sample_rate() != codec->output_sample_rate()) {
-//         ESP_LOGI(TAG, "Resampling audio from %d to %d", opus_decoder_->sample_rate(), codec->output_sample_rate());
-//         output_resampler_.Configure(opus_decoder_->sample_rate(), codec->output_sample_rate());
-//     }
-// }
-
-// void WebrtcApplication::StartAudio() {
-//     std::lock_guard<std::mutex> lock(mutex_);
-//     opus_decoder_->ResetState();
-//     audio_decode_queue_.clear();
-//     auto codec = Board::GetInstance().GetAudioCodec();
-//     codec->EnableInput(true);
-//     codec->EnableOutput(true);
-//     audio_processor_.Start();
-// }
-
-// void WebrtcApplication::StopAudio() {
-//     auto codec = Board::GetInstance().GetAudioCodec();
-//     // codec->EnableInput(false);
-//     codec->EnableOutput(false);
-//     // audio_processor_.Stop();
-// }
-
-
 // // 把接受的音频数据解码成PCM数据，放到队列中播放
 // void WebrtcApplication::WebrtcIncomingAudio(uint8_t *data, size_t size) {
 //     std::lock_guard<std::mutex> lock(mutex_);
@@ -185,7 +155,9 @@ void WebrtcApplication::ButtonPressedDown() {
 }
 
 void WebrtcApplication::WebrtcStartVoice(){
-
+    if (app_webrtc_->webrtc_is_runing){
+        return;
+    }
     ESP_LOGW(TAG, "WebrtcStartVoice");
     auto& board = Board::GetInstance();
     opus_encoder_->ResetState();
@@ -201,4 +173,19 @@ void WebrtcApplication::WebrtcStartVoice(){
     audio_processor_.Start();
     app_webrtc_->StartAudio();
     
+}
+
+void WebrtcApplication::WebrtcStopVoice(AudioCodec* codec){
+    if (!app_webrtc_->webrtc_is_runing){
+        return;
+    }
+    ESP_LOGW(TAG, "WebrtcStopVoice");
+    audio_processor_.Stop();
+    codec->EnableInput(false);
+    app_webrtc_->StopAudio();
+    codec->EnableOutput(false);
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        audio_decode_queue_.clear();
+    }
 }

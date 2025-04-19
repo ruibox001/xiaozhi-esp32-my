@@ -32,7 +32,7 @@ void on_audio_track_callback(uint8_t *data, size_t size, void *userdata) {
     // For demonstration, we'll just print the size of the data received
     // ESP_LOGI(TAG, "Received audio data of size: %zu\n", size);
     AppWebrtc* self = static_cast<AppWebrtc*>(userdata);
-    if (self) {
+    if (self && data) {
         // 4. 调用真正的成员函数
         self->on_incoming_audio_(std::vector<uint8_t>((uint8_t*)data, (uint8_t*)data + size));
     }
@@ -63,11 +63,7 @@ AppWebrtc::AppWebrtc() {
 
 AppWebrtc::~AppWebrtc() {
     ESP_LOGW(TAG, "AppWebrtc --- destroy %p", this);
-    webrtc_is_runing = false;
 
-    if (on_incoming_audio_){
-        on_incoming_audio_ = nullptr;
-    }
     if (g_pc) {
         g_pc = nullptr;
     }
@@ -77,6 +73,14 @@ AppWebrtc::~AppWebrtc() {
     }
     if (decoder_ptr_) {
         decoder_ptr_ = nullptr;
+    }
+
+    if (on_play_audio_) {
+        on_play_audio_ = nullptr;
+    }
+
+    if (on_incoming_audio_){
+        on_incoming_audio_ = nullptr;
     }
 }
 
@@ -97,7 +101,7 @@ void AppWebrtc::StartConnect(OpusEncoderWrapper* encoder, OpusDecoderWrapper* de
             { .urls = "stun:stun.l.google.com:19302" }
         },
         .audio_codec = CODEC_OPUS,
-        .datachannel = DATA_CHANNEL_STRING,
+        .datachannel = DATA_CHANNEL_BINARY,
     };
     config.onaudiotrack = on_audio_track_callback;
     // 2. 传递 this 指针，以便回调时能访问对象
@@ -161,10 +165,11 @@ void AppWebrtc::StartConnect(OpusEncoderWrapper* encoder, OpusDecoderWrapper* de
 void AppWebrtc::PeerConnectionTask() {
     ESP_LOGW(TAG, "PeerConnectionTask started");
     while (true) {
-        // vTaskDelay(pdMS_TO_TICKS(2000));
         // ESP_LOGW(TAG, "PeerConnectionTask runing ");
         if (xSemaphoreTake(xSemaphore, portMAX_DELAY)) {
-            WebrtcEncodeVoiceAndSend();
+            if(!WebrtcEncodeVoiceAndSend()) {
+                vTaskDelay(pdMS_TO_TICKS(20));
+            }
             peer_connection_loop(g_pc);
             xSemaphoreGive(xSemaphore);
         }
@@ -175,7 +180,6 @@ void AppWebrtc::PeerConnectionTask() {
 void AppWebrtc::PeerSignalingTask() {
     ESP_LOGW(TAG, "PeerSignalingTask started");
     while (true) {
-        // vTaskDelay(pdMS_TO_TICKS(2000));
         // ESP_LOGW(TAG, "PeerSignalingTask runing ");
         peer_signaling_loop();
         vTaskDelay(pdMS_TO_TICKS(100));
@@ -195,6 +199,10 @@ void AppWebrtc::StartAudio() {
 }
 
 void AppWebrtc::StopAudio() {
+    if (!webrtc_is_runing) {
+        return;
+    }
+
     webrtc_is_runing = false;
     ESP_LOGI(TAG, "StopAudio %p", this);
 
@@ -220,9 +228,6 @@ void AppWebrtc::StopAudio() {
    
     std::lock_guard<std::mutex> lock(audio_encode_mutex_);
     audio_encode_queue_.clear();
-    on_play_audio_ = nullptr;
-    on_incoming_audio_ = nullptr;
-    eState = PEER_CONNECTION_CLOSED;
 
     if (g_pc) {
         peer_connection_destroy(g_pc);
@@ -271,7 +276,6 @@ void AppWebrtc::WebrtcReadAudioData(const std::vector<uint8_t>& audio_data) {
 bool AppWebrtc::WebrtcEncodeVoiceAndSend(){
 
     if (!webrtc_is_runing) {
-        vTaskDelay(pdMS_TO_TICKS(20));
         return false;
     }
 

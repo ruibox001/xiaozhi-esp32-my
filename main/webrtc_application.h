@@ -73,6 +73,7 @@ private:
     std::unique_ptr<AppWebrtc> app_webrtc_ = nullptr;
 
     void WebrtcStartVoice();
+    void WebrtcStopVoice(AudioCodec* codec);
 };
 
 #endif // _WEBRTCAPPLICATION_H_
