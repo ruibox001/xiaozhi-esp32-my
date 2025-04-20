@@ -38,7 +38,6 @@ public:
 
     // void MainLoop();
     // void OnAudioInput();
-    void OnAudioInput(AudioCodec* codec);
     void OnAudioOutput();
     // void WebrtcIncomingAudio(uint8_t *data, size_t size);
     // void StartAudio();

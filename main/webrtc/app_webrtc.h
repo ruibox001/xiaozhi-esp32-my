@@ -18,7 +18,7 @@ public:
     AppWebrtc();
     ~AppWebrtc();
 
-    void StartConnect(OpusEncoderWrapper* encoder, OpusDecoderWrapper* decoder, const char *mac);
+    void StartConnect(const char *mac);
 
     void StartAudio();
     void StopAudio();
@@ -26,7 +26,6 @@ public:
     void SendAudioData(const std::vector<uint8_t>& data);
     void SendText(const std::string& text);
     void OnIncomingAudioData(std::function<void(std::vector<uint8_t>&& data)> callback);
-    void OnPlayAudioData(std::function<void(std::vector<int16_t> pcm)> callback);
     void OnWebrtcStatusChange(std::function<void(int status)> callback);
     
     // webrtc运行状态
@@ -45,9 +44,6 @@ private:
 
     std::mutex audio_encode_mutex_;
     std::list<std::vector<uint8_t>> audio_encode_queue_;
-
-    OpusEncoderWrapper* encoder_ptr_ = nullptr;  // 存储裸指针，不拥有所有权
-    OpusDecoderWrapper* decoder_ptr_ = nullptr;
 
     bool WebrtcEncodeVoiceAndSend();
 

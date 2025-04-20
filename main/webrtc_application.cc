@@ -28,6 +28,7 @@ WebrtcApplication::~WebrtcApplication() {
 }
 
 void WebrtcApplication::StartWebrtc() {
+    uint32_t log_counter_ = 0;
     auto& board = Board::GetInstance();
     auto codec = Board::GetInstance().GetAudioCodec();
 
@@ -99,25 +100,32 @@ void WebrtcApplication::StartWebrtc() {
 
     while (true)
     {
-        // ESP_LOGI(TAG, "MainLoop");
-        OnAudioInput(codec);
-        vTaskDelay(pdMS_TO_TICKS(2));
-    }
-}
+        log_counter_ += 1;
+        if (log_counter_ > 1000) {
+            ESP_LOGI(TAG, "MainLoop");
+            log_counter_ = 0;
+        }
 
-void WebrtcApplication::OnAudioInput(AudioCodec* codec) {
-    if (!app_webrtc_->webrtc_is_runing){
-        vTaskDelay(pdMS_TO_TICKS(100));
-    }
-
-    std::vector<int16_t> data;
-    if (audio_processor_.IsRunning()) {
-        data.resize(audio_processor_.GetFeedSize());
-        codec->InputData(data);
-        audio_processor_.Feed(data);
-    }
-    if (codec->output_enabled()) {
-        OnAudioOutput();
+        if (!app_webrtc_->webrtc_is_runing){
+            vTaskDelay(pdMS_TO_TICKS(20));
+            continue;
+        }
+        else {
+            // vTaskDelay(pdMS_TO_TICKS(5));
+        }
+    
+        std::vector<int16_t> data;
+        if (audio_processor_.IsRunning()) {
+            int samples = audio_processor_.GetFeedSize();
+            if (samples > 0) {
+                data.resize(samples);
+                codec->InputData(data);
+                audio_processor_.Feed(data);
+            }
+        }
+        if (codec->output_enabled()) {
+            OnAudioOutput();
+        }
     }
 }
 
@@ -149,7 +157,7 @@ void WebrtcApplication::OnAudioOutput() {
 //webrtc相关 ----------------------------------------------------->
 void WebrtcApplication::ButtonPressedDown() {
     ESP_LOGW(TAG, "ButtonPressedDown");
-    app_webrtc_->StartConnect(opus_encoder_.get(), opus_decoder_.get(), SystemInfo::GetMacAddress().c_str());
+    app_webrtc_->StartConnect(SystemInfo::GetMacAddress().c_str());
 }
 
 void WebrtcApplication::WebrtcStartVoice(){

@@ -44,6 +44,7 @@ void onopen(void *userdata) {
     self->gDataChannelOpened = 1;
     
     // 网络连接后移除信令服务器
+    peer_signaling_leave_channel();
     if (self->peer_signaling_task_handle_ != nullptr) {
         vTaskDelete(self->peer_signaling_task_handle_);     // 删除指定任务
         self->peer_signaling_task_handle_ = nullptr;        // 清除句柄，避免重复删除
@@ -63,30 +64,25 @@ AppWebrtc::AppWebrtc() {
 
 AppWebrtc::~AppWebrtc() {
     ESP_LOGW(TAG, "AppWebrtc --- destroy %p", this);
-
-    if (g_pc) {
-        g_pc = nullptr;
-    }
-
-    if (encoder_ptr_) {
-        encoder_ptr_ = nullptr;
-    }
-    if (decoder_ptr_) {
-        decoder_ptr_ = nullptr;
-    }
-
     if (on_incoming_audio_){
         on_incoming_audio_ = nullptr;
     }
+    if (on_webrtc_status_change_){
+        on_webrtc_status_change_ = nullptr;
+    }
+    if (xSemaphore) {
+        vSemaphoreDelete(xSemaphore);   // 销毁 Mutex
+        xSemaphore = nullptr;           // 将指针设为 NULL，避免误用
+    }
+    StopAudio();
 }
 
-void AppWebrtc::StartConnect(OpusEncoderWrapper* encoder, OpusDecoderWrapper* decoder, const char *mac) {
-    if (encoder_ptr_){
+void AppWebrtc::StartConnect(const char *mac) {
+
+    if (webrtc_is_runing) {
         return;
     }
 
-    encoder_ptr_ = encoder;
-    decoder_ptr_ = decoder;
     ESP_LOGI(TAG, "StartConnect %p", this);
 
     //开始初始化webrtc
@@ -151,7 +147,7 @@ void AppWebrtc::PeerConnectionTask() {
             peer_connection_loop(g_pc);
             xSemaphoreGive(xSemaphore);
         }
-        vTaskDelay(pdMS_TO_TICKS(4));
+        // vTaskDelay(pdMS_TO_TICKS(4));
     }
 }
 
@@ -184,7 +180,6 @@ void AppWebrtc::StopAudio() {
     webrtc_is_runing = false;
     ESP_LOGI(TAG, "StopAudio %p", this);
 
-    peer_signaling_leave_channel();
     if (g_pc) {
         peer_connection_close(g_pc);
     }
@@ -195,13 +190,9 @@ void AppWebrtc::StopAudio() {
     }
 
     if (peer_signaling_task_handle_ != nullptr) {
+        peer_signaling_leave_channel();
         vTaskDelete(peer_signaling_task_handle_);     // 删除指定任务
         peer_signaling_task_handle_ = nullptr;        // 清除句柄，避免重复删除
-    }
-
-    if (xSemaphore) {
-        vSemaphoreDelete(xSemaphore);   // 销毁 Mutex
-        xSemaphore = nullptr;           // 将指针设为 NULL，避免误用
     }
    
     std::lock_guard<std::mutex> lock(audio_encode_mutex_);
