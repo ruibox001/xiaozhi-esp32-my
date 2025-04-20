@@ -38,7 +38,8 @@ public:
 
     // void MainLoop();
     // void OnAudioInput();
-    void OnAudioOutput();
+    void OnAudioOutput(AudioCodec* codec);
+    void OnAudioDecodeOnMainOutput(AudioCodec* codec);
     // void WebrtcIncomingAudio(uint8_t *data, size_t size);
     // void StartAudio();
     // void StopAudio();
@@ -66,7 +67,7 @@ private:
     // // Audio encode / decode
     // TaskHandle_t audio_loop_task_handle_ = nullptr;
     // BackgroundTask* background_task_ = nullptr;
-    std::list<std::vector<uint8_t>> audio_decode_queue_;
+    std::list<std::vector<int16_t>> audio_decode_queue_;
     // EventGroupHandle_t event_group_ = nullptr;
 
     std::unique_ptr<AppWebrtc> app_webrtc_ = nullptr;

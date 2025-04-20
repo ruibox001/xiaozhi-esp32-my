@@ -34,20 +34,6 @@ void WebrtcApplication::StartWebrtc() {
 
     /* Setup the display */
     auto display = board.GetDisplay();
-    app_webrtc_ = std::make_unique<AppWebrtc>();
-    app_webrtc_->OnIncomingAudioData([this](std::vector<uint8_t>&& data) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        audio_decode_queue_.emplace_back(std::move(data));
-    });
-    app_webrtc_->OnWebrtcStatusChange([this, codec](int status) {
-        //PEER_CONNECTION_COMPLETED
-        if (status == 4){
-            WebrtcStartVoice();
-        }
-        else{
-            WebrtcStopVoice(codec);
-        }
-    });
 
     /* Setup the audio codec */
     opus_decoder_ = std::make_unique<OpusDecoderWrapper>(codec->output_sample_rate(), 1, OPUS_FRAME_DURATION_MS);
@@ -73,6 +59,32 @@ void WebrtcApplication::StartWebrtc() {
 //     /* Wait for the network to be ready */
     board.StartNetwork();
     board.SetPowerSaveMode(false);
+
+    app_webrtc_ = std::make_unique<AppWebrtc>();
+    app_webrtc_->OnIncomingAudioData([this](std::vector<uint8_t>&& data) {
+        // std::lock_guard<std::mutex> lock(mutex_);
+        // audio_decode_queue_.emplace_back(std::move(data));
+
+        background_task_->Schedule([this, data = std::move(data)]() mutable {
+
+            std::vector<int16_t> pcm;
+            if (!opus_decoder_->Decode(std::move(data), pcm)) {
+                return;
+            }
+            std::lock_guard<std::mutex> lock(mutex_);
+            audio_decode_queue_.emplace_back(std::move(pcm));
+        });
+
+    });
+    app_webrtc_->OnWebrtcStatusChange([this, codec](int status) {
+        //PEER_CONNECTION_COMPLETED
+        if (status == 4){
+            WebrtcStartVoice();
+        }
+        else{
+            WebrtcStopVoice(codec);
+        }
+    });
 
     audio_processor_.Initialize(codec, true);
     audio_processor_.OnOutput([this](std::vector<int16_t>&& data) {
@@ -124,34 +136,45 @@ void WebrtcApplication::StartWebrtc() {
             }
         }
         if (codec->output_enabled()) {
-            OnAudioOutput();
+            OnAudioOutput(codec);
         }
     }
 }
 
 // 从队列中读取音频数据，进行解码
-void WebrtcApplication::OnAudioOutput() {
-    auto codec = Board::GetInstance().GetAudioCodec();
+void WebrtcApplication::OnAudioOutput(AudioCodec* codec) {
 
-    std::unique_lock<std::mutex> lock(mutex_);
+    // std::unique_lock<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     if (audio_decode_queue_.empty()) {
-        lock.unlock();
         return;
     }
 
     // ESP_LOGW(TAG, "OnAudioOutput - %d", audio_decode_queue_.size());
     auto opus = std::move(audio_decode_queue_.front());
     audio_decode_queue_.pop_front();
-    lock.unlock();
+    codec->OutputData(opus);
+}
 
-    background_task_->Schedule([this, codec, opus = std::move(opus)]() mutable {
+void WebrtcApplication::OnAudioDecodeOnMainOutput(AudioCodec* codec) {
 
-        std::vector<int16_t> pcm;
-        if (!opus_decoder_->Decode(std::move(opus), pcm)) {
-            return;
-        }
-        codec->OutputData(pcm);
-    });
+    // std::lock_guard<std::mutex> lock(mutex_);
+    // if (audio_decode_queue_.empty()) {
+    //     return;
+    // }
+
+    // // ESP_LOGW(TAG, "OnAudioOutput - %d", audio_decode_queue_.size());
+    // auto opus = std::move(audio_decode_queue_.front());
+    // audio_decode_queue_.pop_front();
+
+    // background_task_->Schedule([this, codec, opus = std::move(opus)]() mutable {
+
+    //     std::vector<int16_t> pcm;
+    //     if (!opus_decoder_->Decode(std::move(opus), pcm)) {
+    //         return;
+    //     }
+    //     codec->OutputData(pcm);
+    // });
 }
 
 //webrtc相关 ----------------------------------------------------->
