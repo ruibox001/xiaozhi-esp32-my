@@ -18,7 +18,9 @@ public:
     AppWebrtc();
     ~AppWebrtc();
 
-    void StartConnect(const char *mac);
+    void StartConnectAnswer();
+
+    void StartConnectOffer(const char *mac);
 
     void StartAudio();
     void StopAudio();

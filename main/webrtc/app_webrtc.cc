@@ -77,7 +77,7 @@ AppWebrtc::~AppWebrtc() {
     StopAudio();
 }
 
-void AppWebrtc::StartConnect(const char *mac) {
+void AppWebrtc::StartConnectOffer(const char *mac) {
 
     if (webrtc_is_runing) {
         return;
@@ -116,6 +116,12 @@ void AppWebrtc::StartConnect(const char *mac) {
     service_config.client_id = deviceid;
     service_config.pc = g_pc;
     service_config.mqtt_url = "broker.emqx.io";
+    // service_config.mqtt_url = "172.20.10.3";
+    // service_config.mqtt_url = "192.168.1.3";
+    service_config.mqtt_port = 8883;
+    // service_config.username = "rabbit";
+    // service_config.password = "wangWANG1234";
+    // service_config.role = Role_offer;
     peer_signaling_set_config(&service_config);
     peer_signaling_join_channel();
 
@@ -255,4 +261,72 @@ bool AppWebrtc::WebrtcEncodeVoiceAndSend(){
     lock.unlock();
     
     return true;
+}
+
+
+void AppWebrtc::StartConnectAnswer() {
+
+    
+    if (webrtc_is_runing) {
+        return;
+    }
+
+    ESP_LOGI(TAG, "StartClentConnect %p", this);
+
+    //开始初始化webrtc
+    const char *mac = "e4:b0:63:b9:f2:f8";
+    static char deviceid[32] = {0};
+
+    PeerConfiguration config = {
+        .ice_servers = {
+            { .urls = "stun:stun.l.google.com:19302" }
+        },
+        .audio_codec = CODEC_OPUS,
+        .datachannel = DATA_CHANNEL_BINARY,
+    };
+    config.onaudiotrack = on_audio_track_callback;
+    // 2. 传递 this 指针，以便回调时能访问对象
+    config.user_data = this;
+
+    ESP_LOGI(TAG, "[APP] Client Startup..");
+    ESP_LOGI(TAG, "[APP] Client Free memory: %d bytes", esp_get_free_heap_size());
+    ESP_LOGI(TAG, "[APP] Client IDF version: %s", esp_get_idf_version());
+
+    strcpy(deviceid, mac);
+    ESP_LOGI(TAG, "Device ID: %s", deviceid);
+
+    peer_init();
+
+    g_pc = peer_connection_create(&config);
+    peer_connection_oniceconnectionstatechange(g_pc, oniceconnectionstatechange);
+    peer_connection_ondatachannel(g_pc, onmessage, onopen, onclose);
+
+    ServiceConfiguration service_config = SERVICE_CONFIG_DEFAULT();
+    service_config.client_id = deviceid;
+    service_config.pc = g_pc;
+    service_config.mqtt_url = "broker.emqx.io";
+    // service_config.mqtt_url = "172.20.10.3";
+    // service_config.mqtt_url = "192.168.1.3";
+    service_config.mqtt_port = 8883;
+    // service_config.username = "rabbit";
+    // service_config.password = "wangWANG1234";
+    // service_config.role = Role_answer;
+    peer_signaling_set_config(&service_config);
+    peer_signaling_join_channel();
+
+
+    ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
+    ESP_LOGI(TAG, "open https://sepfy.github.io/webrtc?deviceId=%s", deviceid);
+
+    xTaskCreatePinnedToCore([](void* arg) {
+        AppWebrtc* appwebrtc = (AppWebrtc*)arg;
+        appwebrtc->PeerConnectionTask();
+        vTaskDelete(NULL);
+    }, "peer_connection", 4096 * 6, this, 18, &peer_connection_task_handle_, 1);
+
+    xTaskCreatePinnedToCore([](void* arg) {
+        AppWebrtc* appwebrtc = (AppWebrtc*)arg;
+        appwebrtc->PeerSignalingTask();
+        vTaskDelete(NULL);
+    }, "peer_signaling", 4096 * 2, this, 6, &peer_signaling_task_handle_, 0);
 }

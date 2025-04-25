@@ -180,7 +180,8 @@ void WebrtcApplication::OnAudioDecodeOnMainOutput(AudioCodec* codec) {
 //webrtc相关 ----------------------------------------------------->
 void WebrtcApplication::ButtonPressedDown() {
     ESP_LOGW(TAG, "ButtonPressedDown");
-    app_webrtc_->StartConnect(SystemInfo::GetMacAddress().c_str());
+    app_webrtc_->StartConnectOffer(SystemInfo::GetMacAddress().c_str());
+    // app_webrtc_->StartConnectAnswer();
 }
 
 void WebrtcApplication::WebrtcStartVoice(){
