@@ -127,19 +127,22 @@ static void peer_signaling_on_pub_event(const char *msg, size_t size) {
     LOGW("peer_signaling_on_pub_event  ----------------------------------> id = %d", id);
 
     //新增anser端接收到offer
-    if (id == offerId)
-    {
-      item = cJSON_GetObjectItem(req, "result");
-      if (item) {
-        peer_connection_set_remote_description(g_ps.pc, item->valuestring);
+    if (g_ps.role == Role_Answer) {
+      if (id == offerId)
+      {
+        item = cJSON_GetObjectItem(req, "result");
+        if (item) {
+          peer_connection_set_remote_description(g_ps.pc, item->valuestring);
+        }
+        g_ps.id = id;
+        peer_connection_create_offer(g_ps.pc);
+        return;
       }
-      peer_connection_create_offer(g_ps.pc);
-      return;
-    }
-    if (id == answerId)
-    {
-      LOGW("receive answer ok");
-      return;
+      if (id == answerId)
+      {
+        LOGW("receive answer ok");
+        return;
+      }
     }
 
     item = cJSON_GetObjectItem(req, "method");
@@ -433,7 +436,7 @@ static void peer_signaling_onicecandidate(char *description, void *userdata) {
   {
     res = cJSON_CreateObject();
     cJSON_AddStringToObject(res, "jsonrpc", RPC_VERSION);
-    cJSON_AddNumberToObject(res, "answerId", answerId);
+    cJSON_AddNumberToObject(res, "id", answerId);
     cJSON_AddStringToObject(res, "method", "answer");
     cJSON_AddStringToObject(res, "params", description);
     payload = cJSON_PrintUnformatted(res);
