@@ -18,7 +18,7 @@ public:
     AppWebrtc();
     ~AppWebrtc();
 
-    void StartConnectAnswer();
+    // void StartConnectAnswer();
 
     void StartConnectOffer(const char *mac);
 

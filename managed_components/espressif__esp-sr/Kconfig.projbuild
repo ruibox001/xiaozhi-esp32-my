@@ -46,11 +46,33 @@ choice SR_VADN_MODEL_LOAD
 
     config SR_VADN_WEBRTC
         bool "voice activity detection (WebRTC)"
-    
+
     config SR_VADN_VADNET1_MEDIUM
         bool "voice activity detection (vadnet1 medium)"
 	    depends on IDF_TARGET_ESP32S3 ||  IDF_TARGET_ESP32P4
 endchoice
+
+
+menu "Load Multiple Wake Words"
+    depends on IDF_TARGET_ESP32C5 ||  IDF_TARGET_ESP32C3 || IDF_TARGET_ESP32C6 || IDF_TARGET_ESP32S2
+
+    config SR_WN_WN9S_HILEXIN
+    bool "Hi,乐鑫 (wn9s_hilexin)"
+    default False
+
+    config SR_WN_WN9S_HIESP
+    bool "Hi,ESP (wn9s_hiesp)"
+    default False
+
+    config SR_WN_WN9S_NIHAOXIAOZHI
+    bool "你好小智 (wn9s_nihaoxiaozhi)"
+    default False
+
+    config SR_WN_WN9S_HIJASON
+    bool "Hi,Jason (wn9s_hijason_tts2)"
+    default False
+
+endmenu
 
 menu "Load Multiple Wake Words"
     depends on IDF_TARGET_ESP32S3 ||  IDF_TARGET_ESP32P4 || IDF_TARGET_ESP32
@@ -78,7 +100,7 @@ menu "Load Multiple Wake Words"
     config SR_WN_WN9_JARVIS_TTS
     bool "Jarvis (wn9_jarvis_tts)"
     default False
-    
+
     config SR_WN_WN9_COMPUTER_TTS
     bool "computer (wn9_computer_tts)"
     default False

@@ -1,5 +1,5 @@
 dependencies:
-  espressif/esp-dsp: <=1.5.0
+  espressif/esp-dsp: 1.6.0
   idf: '>=5.0'
 description: esp_sr provides basic algorithms for Speech Recognition applications
 files:
@@ -9,7 +9,7 @@ files:
   - test_apps/**/*
 repository: git://github.com/espressif/esp-sr.git
 repository_info:
-  commit_sha: a3186dcde7dce24862a9fdefdbf068ecfed2635b
+  commit_sha: ba76317b174ad3cb3814eceae60f8dcfdc62fd2c
   path: .
 url: https://github.com/espressif/esp-sr
-version: 2.0.3
+version: 2.1.0

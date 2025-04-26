@@ -1,7 +1,20 @@
 # Change log for esp-sr
 
+## 2.1.0
+- esp32c3 support wakenet9s and aec
+- esp32c5 support wakenet9s and aec
+- esp32c6 support wakenet9s and aec
+- esp32s2 support wakenet9s and aec
+- Add four wakenet9s model: hilexin,hiesp,nihaoxiaozhi,hijason
+
+## 2.0.5
+- Fix fftr bug
+
+## 2.0.4
+- Add DOA(Direction of Arrival) algorithm
+
 ## 2.0.3
--Add wakenet9 support for ESP32
+- Add wakenet9 support for ESP32
 
 ## 2.0.2
 - Accelerate the AEC of ESP32C5, reducing the CPU loading from 39% to 30%.
