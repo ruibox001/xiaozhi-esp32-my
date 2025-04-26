@@ -127,7 +127,7 @@ static void peer_signaling_on_pub_event(const char *msg, size_t size) {
     LOGW("peer_signaling_on_pub_event  ----------------------------------> id = %d", id);
 
     //新增anser端接收到offer
-    if (g_ps.role == Role_Answer) {
+    if (g_ps.role == Role_answer) {
       if (id == offerId)
       {
         item = cJSON_GetObjectItem(req, "result");
