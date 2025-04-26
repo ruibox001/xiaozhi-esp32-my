@@ -66,18 +66,20 @@ typedef struct PeerSignaling {
   char client_id[CRED_LEN];
   PeerConnection *pc;
 
+  uint8_t role;
+
 } PeerSignaling;
 
 static PeerSignaling g_ps;
 
-static void peer_signaling_mqtt_publish(MQTTContext_t *mqtt_ctx, const char *message) {
-
+static void peer_signaling_mqtt_publish(MQTTContext_t *mqtt_ctx, const char *message, MQTTQoS_t qos) {
+  LOGW("peer_signaling_mqtt_publish  ----------------------------------> %s", message); 
   MQTTStatus_t status;
   MQTTPublishInfo_t pub_info;
 
   memset(&pub_info, 0, sizeof(pub_info));
 
-  pub_info.qos = MQTTQoS0;
+  pub_info.qos = qos;
   pub_info.retain = false;
   pub_info.pTopicName = g_ps.pubtopic;
   pub_info.topicNameLength = strlen(g_ps.pubtopic);
@@ -90,13 +92,13 @@ static void peer_signaling_mqtt_publish(MQTTContext_t *mqtt_ctx, const char *mes
     LOGE("MQTT_Publish failed: Status=%s.", MQTT_Status_strerror(status));
   } else {
 
-    LOGD("MQTT_Publish succeeded.");
+    LOGD("MQTT_Publish succeeded = %s", g_ps.pubtopic);
   }
 }
 
 
 static void peer_signaling_on_pub_event(const char *msg, size_t size) {
-
+  LOGW("peer_signaling_on_pub_event  ----------------------------------> %s", msg);
   cJSON *req, *res, *item, *result, *error;
   int id = -1;
   char *payload = NULL;
@@ -122,6 +124,23 @@ static void peer_signaling_on_pub_event(const char *msg, size_t size) {
     }
 
     id = item->valueint;
+    LOGW("peer_signaling_on_pub_event  ----------------------------------> id = %d", id);
+
+    //新增anser端接收到offer
+    if (id == offerId)
+    {
+      item = cJSON_GetObjectItem(req, "result");
+      if (item) {
+        peer_connection_set_remote_description(g_ps.pc, item->valuestring);
+      }
+      peer_connection_create_offer(g_ps.pc);
+      return;
+    }
+    if (id == answerId)
+    {
+      LOGW("receive answer ok");
+      return;
+    }
 
     item = cJSON_GetObjectItem(req, "method");
     if (!item && cJSON_IsString(item)) {
@@ -143,7 +162,8 @@ static void peer_signaling_on_pub_event(const char *msg, size_t size) {
           error = cJSON_CreateRaw(RPC_ERROR_INTERNAL_ERROR);
         } break;
       }
-    } else if (strcmp(item->valuestring, RPC_METHOD_ANSWER) == 0) {
+    } 
+    else if (strcmp(item->valuestring, RPC_METHOD_ANSWER) == 0) {
 
       item = cJSON_GetObjectItem(req, "params");
       if (!item && !cJSON_IsString(item)) {
@@ -188,7 +208,7 @@ static void peer_signaling_on_pub_event(const char *msg, size_t size) {
     payload = cJSON_PrintUnformatted(res);
 
     if (payload) {
-      peer_signaling_mqtt_publish(&g_ps.mqtt_ctx, payload);
+      peer_signaling_mqtt_publish(&g_ps.mqtt_ctx, payload, MQTTQoS0);
       free(payload);
     }
     cJSON_Delete(res);
@@ -205,7 +225,7 @@ HTTPResponse_t peer_signaling_http_request(const TransportInterface_t *transport
  const char *path, size_t path_len,
  const char *auth, size_t auth_len,
  const char *body, size_t body_len) {
-
+  LOGW("peer_signaling_http_request  ----------------------------------> %s", method);
   HTTPStatus_t status = HTTPSuccess;
   HTTPRequestInfo_t request_info = {0};
   HTTPResponse_t response = {0};
@@ -250,7 +270,7 @@ HTTPResponse_t peer_signaling_http_request(const TransportInterface_t *transport
 
 static int peer_signaling_http_post(const char *hostname, const char *path, int port,
  const char *auth, const char *body) {
-
+  LOGW("peer_signaling_http_post  ----------------------------------> %s", hostname);
   int ret = 0;
   TransportInterface_t trans_if = {0};
   NetworkContext_t net_ctx;
@@ -299,7 +319,7 @@ static int peer_signaling_http_post(const char *hostname, const char *path, int 
 
 static void peer_signaling_mqtt_event_cb(MQTTContext_t *mqtt_ctx,
  MQTTPacketInfo_t *packet_info, MQTTDeserializedInfo_t *deserialized_info) {
-
+  LOGW("peer_signaling_mqtt_event_cb  ----------------------------------> %d", packet_info->type);
   switch (packet_info->type) {
 
     case MQTT_PACKET_TYPE_CONNACK:
@@ -319,7 +339,7 @@ static void peer_signaling_mqtt_event_cb(MQTTContext_t *mqtt_ctx,
 }
 
 static int peer_signaling_mqtt_connect(const char *hostname, int port) {
-
+  LOGW("peer_signaling_mqtt_connect  ----------------------------------> [2] %s - %d", hostname, port);
   MQTTStatus_t status;
   MQTTConnectInfo_t conn_info;
   bool session_present;
@@ -370,7 +390,7 @@ static int peer_signaling_mqtt_connect(const char *hostname, int port) {
 }
 
 static int peer_signaling_mqtt_subscribe(int subscribed) {
-
+  LOGW("peer_signaling_mqtt_subscribe  ----------------------------------> [3] %d", subscribed);
   MQTTStatus_t status = MQTTSuccess;
   MQTTSubscribeInfo_t sub_info;
 
@@ -398,16 +418,33 @@ static int peer_signaling_mqtt_subscribe(int subscribed) {
     return -1;
   }
 
-  LOGD("MQTT Subscribe/Unsubscribe succeeded.");
+  LOGD("MQTT Subscribe/Unsubscribe succeeded - subtopic=%s", g_ps.subtopic);
   return 0;
 }
 
 static void peer_signaling_onicecandidate(char *description, void *userdata) {
-
+  LOGW("peer_signaling_onicecandidate  ----------------------------------> %d - %d", g_ps.role, g_ps.id);
   cJSON *res;
   char *payload;
   char cred_plaintext[2*CRED_LEN + 1];
   char cred_base64[2*CRED_LEN + 10];
+
+  if (g_ps.role == Role_answer)
+  {
+    res = cJSON_CreateObject();
+    cJSON_AddStringToObject(res, "jsonrpc", RPC_VERSION);
+    cJSON_AddNumberToObject(res, "answerId", answerId);
+    cJSON_AddStringToObject(res, "method", "answer");
+    cJSON_AddStringToObject(res, "params", description);
+    payload = cJSON_PrintUnformatted(res);
+    if (payload) {
+      peer_signaling_mqtt_publish(&g_ps.mqtt_ctx, payload, MQTTQoS0);
+      free(payload);
+    }
+    cJSON_Delete(res);
+    return;
+  }
+  
 
   if (g_ps.id > 0) {
     res = cJSON_CreateObject();
@@ -416,7 +453,7 @@ static void peer_signaling_onicecandidate(char *description, void *userdata) {
     cJSON_AddStringToObject(res, "result", description);
     payload = cJSON_PrintUnformatted(res);
     if (payload) {
-      peer_signaling_mqtt_publish(&g_ps.mqtt_ctx, payload);
+      peer_signaling_mqtt_publish(&g_ps.mqtt_ctx, payload, MQTTQoS0);
       free(payload);
     }
     cJSON_Delete(res);
@@ -438,7 +475,7 @@ static void peer_signaling_onicecandidate(char *description, void *userdata) {
 }
 
 int peer_signaling_whip_connect() {
-
+  LOGW("peer_signaling_whip_connect  ----------------------------------> 1");
   if (g_ps.pc == NULL) {
     LOGW("PeerConnection is NULL");
     return -1;
@@ -456,7 +493,8 @@ void peer_signaling_whip_disconnect() {
 }
 
 int peer_signaling_join_channel() {
-
+  LOGW("peer_signaling_join_channel  ----------------------------------> [1]");
+  int sub_status;
   if (g_ps.pc == NULL) {
     LOGW("PeerConnection is NULL");
     return -1;
@@ -474,7 +512,11 @@ int peer_signaling_join_channel() {
     return -1;
   }
 
-  peer_signaling_mqtt_subscribe(1);
+  sub_status = peer_signaling_mqtt_subscribe(1);
+  // answer订阅成功后，需要主动发送通信
+  if (sub_status == 0 && g_ps.role == Role_answer) {
+    peer_signaling_answer_first_public();
+  }
   return 0;
 }
 
@@ -487,6 +529,7 @@ int peer_signaling_loop() {
 }
 
 void peer_signaling_leave_channel() {
+  LOGW("peer_signaling_leave_channel  ----------------------------------> 0");
 
   MQTTStatus_t status = MQTTSuccess;
 
@@ -501,7 +544,7 @@ void peer_signaling_leave_channel() {
 }
 
 void peer_signaling_set_config(ServiceConfiguration *service_config) {
-
+  LOGW("peer_signaling_set_config  ----------------------------------> [0] %d", service_config->role);
   char *pos;
 
   memset(&g_ps, 0, sizeof(g_ps));
@@ -537,8 +580,14 @@ void peer_signaling_set_config(ServiceConfiguration *service_config) {
 
   if (service_config->client_id != NULL && strlen(service_config->client_id) > 0) {
     strncpy(g_ps.client_id, service_config->client_id, CRED_LEN);
-    snprintf(g_ps.subtopic, sizeof(g_ps.subtopic), "webrtc/%s/jsonrpc", service_config->client_id);
-    snprintf(g_ps.pubtopic, sizeof(g_ps.pubtopic), "webrtc/%s/jsonrpc-reply", service_config->client_id);
+    if (service_config->role == Role_offer) {
+      snprintf(g_ps.subtopic, sizeof(g_ps.subtopic), "webrtc/%s/jsonrpc", service_config->client_id);
+      snprintf(g_ps.pubtopic, sizeof(g_ps.pubtopic), "webrtc/%s/jsonrpc-reply", service_config->client_id);
+    }
+    else {
+      snprintf(g_ps.subtopic, sizeof(g_ps.subtopic), "webrtc/%s/jsonrpc-reply", service_config->server_id);
+      snprintf(g_ps.pubtopic, sizeof(g_ps.pubtopic), "webrtc/%s/jsonrpc", service_config->server_id);
+    }
   }
 
   if (service_config->username != NULL && strlen(service_config->username) > 0) {
@@ -549,6 +598,22 @@ void peer_signaling_set_config(ServiceConfiguration *service_config) {
     strncpy(g_ps.password, service_config->password, CRED_LEN);
   }
 
+  g_ps.role = service_config->role;
   g_ps.pc = service_config->pc;
   peer_connection_onicecandidate(g_ps.pc, peer_signaling_onicecandidate);
+}
+
+void peer_signaling_answer_first_public() {
+  LOGW("peer_signaling_answer_first_public  ----------------------------------> %d", g_ps.role);
+
+  cJSON * res = cJSON_CreateObject();
+  cJSON_AddStringToObject(res, "jsonrpc", RPC_VERSION);
+  cJSON_AddNumberToObject(res, "id", offerId);
+  cJSON_AddStringToObject(res, "method", "offer");
+  char *payload = cJSON_PrintUnformatted(res);
+  if (payload) {
+    peer_signaling_mqtt_publish(&g_ps.mqtt_ctx, payload, MQTTQoS0);
+    free(payload);
+  }
+  cJSON_Delete(res);
 }

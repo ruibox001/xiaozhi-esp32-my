@@ -7,6 +7,12 @@
 extern "C" {
 #endif
 
+#define Role_offer 0
+#define Role_answer 1
+
+#define offerId 172
+#define answerId 146
+
 typedef struct ServiceConfiguration {
   const char *mqtt_url;
   int mqtt_port;
@@ -16,6 +22,8 @@ typedef struct ServiceConfiguration {
   const char *username;
   const char *password;
   PeerConnection *pc;
+  uint8_t role; // 0: offer, 1: answer
+  const char *server_id;
 } ServiceConfiguration;
 
 #define SERVICE_CONFIG_DEFAULT() { \
@@ -40,6 +48,8 @@ int peer_signaling_join_channel();
 void peer_signaling_leave_channel();
 
 int peer_signaling_loop();
+
+void peer_signaling_answer_first_public();
 
 #ifdef __cplusplus
 } 
