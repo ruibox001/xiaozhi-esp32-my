@@ -94,6 +94,7 @@ void AppWebrtc::StartConnectOffer(const char *mac) {
         },
         .audio_codec = CODEC_OPUS,
         .datachannel = DATA_CHANNEL_BINARY,
+        .role = Role_offer,
     };
     config.onaudiotrack = on_audio_track_callback;
     // 2. 传递 this 指针，以便回调时能访问对象
@@ -283,6 +284,7 @@ void AppWebrtc::StartConnectAnswer(const char *mac) {
         },
         .audio_codec = CODEC_OPUS,
         .datachannel = DATA_CHANNEL_BINARY,
+        .role = Role_answer,
     };
     config.onaudiotrack = on_audio_track_callback;
     // 2. 传递 this 指针，以便回调时能访问对象
@@ -330,4 +332,7 @@ void AppWebrtc::StartConnectAnswer(const char *mac) {
         appwebrtc->PeerSignalingTask();
         vTaskDelete(NULL);
     }, "peer_signaling", 4096 * 2, this, 6, &peer_signaling_task_handle_, 0);
+
+    // answer订阅成功后，需要主动发送通信
+    peer_signaling_answer_first_public();
 }

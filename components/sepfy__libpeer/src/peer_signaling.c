@@ -71,6 +71,7 @@ typedef struct PeerSignaling {
 } PeerSignaling;
 
 static PeerSignaling g_ps;
+char *answer_sdp = NULL;
 
 static void peer_signaling_mqtt_publish(MQTTContext_t *mqtt_ctx, const char *message, MQTTQoS_t qos) {
   LOGW("peer_signaling_mqtt_publish  ----------------------------------> %s", message); 
@@ -132,7 +133,7 @@ static void peer_signaling_on_pub_event(const char *msg, size_t size) {
       {
         item = cJSON_GetObjectItem(req, "result");
         if (item) {
-          peer_connection_set_remote_description(g_ps.pc, item->valuestring);
+          answer_sdp = item->valuestring;
         }
         g_ps.id = id;
         peer_connection_create_offer(g_ps.pc);
@@ -141,6 +142,8 @@ static void peer_signaling_on_pub_event(const char *msg, size_t size) {
       if (id == answerId)
       {
         LOGW("receive answer ok");
+        peer_connection_set_remote_description(g_ps.pc, answer_sdp);
+        free(answer_sdp);
         return;
       }
     }
@@ -497,7 +500,6 @@ void peer_signaling_whip_disconnect() {
 
 int peer_signaling_join_channel() {
   LOGW("peer_signaling_join_channel  ----------------------------------> [1]");
-  int sub_status;
   if (g_ps.pc == NULL) {
     LOGW("PeerConnection is NULL");
     return -1;
@@ -515,11 +517,7 @@ int peer_signaling_join_channel() {
     return -1;
   }
 
-  sub_status = peer_signaling_mqtt_subscribe(1);
-  // answer订阅成功后，需要主动发送通信
-  if (sub_status == 0 && g_ps.role == Role_answer) {
-    peer_signaling_answer_first_public();
-  }
+  peer_signaling_mqtt_subscribe(1);
   return 0;
 }
 

@@ -68,6 +68,7 @@ typedef struct PeerConfiguration {
   void (*onvideotrack)(uint8_t *data, size_t size, void *userdata);
   void (*on_request_keyframe)();
   void *user_data;
+  uint8_t role; // 0: offer, 1: answer
 
 } PeerConfiguration;
 
@@ -103,6 +104,8 @@ int peer_connection_send_video(PeerConnection *pc, const uint8_t *packet, size_t
 void peer_connection_set_remote_description(PeerConnection *pc, const char *sdp);
 
 void peer_connection_create_offer(PeerConnection *pc);
+
+void peer_connection_state_new(PeerConnection *pc);
 
 /**
  * @brief register callback function to handle packet loss from RTCP receiver report
