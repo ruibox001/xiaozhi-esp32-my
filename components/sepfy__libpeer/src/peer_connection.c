@@ -271,7 +271,7 @@ int peer_connection_datachannel_send_sid(PeerConnection *pc, char *message, size
     return sctp_outgoing_data(&pc->sctp, message, len, PPID_BINARY, sid);
 }
 
-static void peer_connection_state_new(PeerConnection *pc) {
+void peer_connection_state_new(PeerConnection *pc) {
 
   char *description = (char*)pc->temp_buf;
 
