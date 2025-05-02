@@ -97,10 +97,10 @@ void TalkApplication::StartTalk() {
             log_counter_ = 0;
         }
 
-        if (!talk_app_->is_runing){
-            vTaskDelay(pdMS_TO_TICKS(20));
-            continue;
-        }
+        // if (!talk_app_->is_runing){
+        //     vTaskDelay(pdMS_TO_TICKS(20));
+        //     continue;
+        // }
         // else {
         //     vTaskDelay(pdMS_TO_TICKS(5));
         // }
@@ -172,6 +172,7 @@ void TalkApplication::StartVoice(){
 
     // 预先关闭音频输出，避免升级过程有音频操作
     auto codec = board.GetAudioCodec();
+    codec->SetOutputVolume(80);
     codec->EnableInput(true);
     codec->EnableOutput(true);
     {
