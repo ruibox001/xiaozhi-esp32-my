@@ -172,7 +172,7 @@ void TalkApplication::StartVoice(){
 
     // 预先关闭音频输出，避免升级过程有音频操作
     auto codec = board.GetAudioCodec();
-    // codec->EnableInput(true);
+    codec->EnableInput(true);
     codec->EnableOutput(true);
     {
         std::lock_guard<std::mutex> lock(mutex_);
