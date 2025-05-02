@@ -5,8 +5,8 @@
 #include <driver/gpio.h>
 #include <esp_event.h>
 
-// #include "application.h"
-#include "webrtc_application.h"
+#include "application.h"
+#include "talk_application.h"
 
 #define TAG "main"
 
@@ -28,5 +28,5 @@ extern "C" void app_main(void)
     // Application::GetInstance().Start();
     // The main thread will exit and release the stack memory
 
-    WebrtcApplication::GetInstance().StartWebrtc();
+    TalkApplication::GetInstance().StartTalk();
 }

@@ -13,7 +13,7 @@
 #include <wifi_station.h>
 
 // #include "application.h"
-#include "webrtc_application.h"
+#include "talk_application.h"
 
 #define TAG "kevin-sp-v4"
 
@@ -60,7 +60,7 @@ private:
             // if (app.GetDeviceState() == kDeviceStateStarting && !WifiStation::GetInstance().IsConnected()) {
             //     ResetWifiConfiguration();
             // }
-            WebrtcApplication::GetInstance().ButtonPressedDown();
+            TalkApplication::GetInstance().ButtonPressedDown();
         });
         boot_button_.OnPressDown([this]() {
 

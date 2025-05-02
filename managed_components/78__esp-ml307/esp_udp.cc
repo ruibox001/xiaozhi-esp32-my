@@ -35,6 +35,21 @@ bool EspUdp::Connect(const std::string& host, int port) {
         return false;
     }
 
+    // 绑定本地端口 8080
+    struct sockaddr_in local_addr;
+    bzero(&local_addr, sizeof(local_addr));
+    local_addr.sin_family = AF_INET;
+    local_addr.sin_addr.s_addr = INADDR_ANY;
+    local_addr.sin_port = htons(8080);
+
+    if (bind(udp_fd_, (struct sockaddr*)&local_addr, sizeof(local_addr)) < 0) {
+        ESP_LOGE(TAG, "Failed to bind to local port 8080");
+        close(udp_fd_);
+        udp_fd_ = -1;
+        return false;
+    }
+
+
     int ret = connect(udp_fd_, (struct sockaddr*)&server_addr, sizeof(server_addr));
     if (ret < 0) {
         ESP_LOGE(TAG, "Failed to connect to %s:%d", host.c_str(), port);
