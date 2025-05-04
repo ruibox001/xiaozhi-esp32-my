@@ -12,9 +12,9 @@
 //下面是类成员函数
 
 TalkUdp::TalkUdp() {
-    udp_server_ = "192.168.1.115";
+    // udp_server_ = "192.168.1.115";
     // udp_server_ = "192.168.1.87";
-    // udp_server_ = "192.168.1.29";
+    udp_server_ = "192.168.1.29";
     udp_port_ = 8080;
 }
 
